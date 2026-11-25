@@ -1,0 +1,59 @@
+{
+  "name": "@ratmath/stats",
+  "version": "0.0.0",
+  "description": "Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests and regression",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "src/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "test": "bun test ./tests",
+    "docs:build": "bun scripts/build-docs.js"
+  },
+  "keywords": [
+    "probability",
+    "statistics",
+    "distribution",
+    "regression",
+    "simulation",
+    "exact",
+    "ratmath"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ratmath/stats.git"
+  },
+  "homepage": "https://ratmath.com/stats/",
+  "bugs": {
+    "url": "https://github.com/ratmath/stats/issues"
+  },
+  "dependencies": {
+    "@ratmath/core": "^0.10.0"
+  },
+  "devDependencies": {
+    "katex": "0.19.1"
+  },
+  "types": "index.d.ts",
+  "author": "James Taylor",
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

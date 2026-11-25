@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RatMath Statistics</title>
+<meta name="description" content="Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests and regression.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">@ratmath/stats</div>
+<h1>Probability and statistics that say how they know</h1>
+<p class="lede">Probability and statistics in one library. Every answer is labelled exact, certified or simulated, and data can be generated from a model you choose, disturbed with noise from another distribution, and handed to the tests and regressions to see whether they recover what was put in.</p>
+<p class="notice"><strong>Planned, not built yet.</strong> This site is the frame the package will grow into. The full plan is in the <a href="https://github.com/ratmath/ratmath/blob/main/docs/design/library-roadmap.md#6-a-probability-and-statistics-package-ratmathstats">library roadmap</a>, and the <a href="https://ratmath.com/shelf/">RatMath Shelf</a> page lists what exists across all the libraries.</p>
+
+<h2>What it will cover</h2>
+<ul>
+  <li>Finite probability: events, conditional probability, Bayes, random variables, joint tables, all exact.</li>
+  <li>Discrete and continuous distributions with certified probabilities and quantiles.</li>
+  <li>Descriptive statistics and exact tests.</li>
+  <li>Seeded generation of data from a known model, with noise and contamination from other distributions, and experiments that repeat a procedure many times.</li>
+  <li>Estimation, confidence intervals and the standard tests.</li>
+  <li>Regression and analysis of variance.</li>
+  <li>Rank tests, permutation tests and the bootstrap.</li>
+  <li>Markov chains and conjugate Bayesian updating.</li>
+</ul>
+
+<h2>The order of work</h2>
+<p>The phases below come from the roadmap. Sizes are rough estimates in lines of source.</p>
+<div class="tablewrap"><table class="plan">
+<tr><th>Phase</th><th>Contents</th><th>Estimate</th></tr>
+<tr><td>1</td><td>Finite probability, discrete distributions, descriptive statistics, exact tests</td><td>1,100</td></tr>
+<tr><td>2</td><td>Continuous distributions, certified</td><td>1,200, plus 500 in analytic</td></tr>
+<tr><td>3</td><td>Seeded generation, models with noise and contamination, experiments</td><td>1,300</td></tr>
+<tr><td>4</td><td>Estimation, confidence intervals, the standard tests</td><td>1,000</td></tr>
+<tr><td>5</td><td>Regression and analysis of variance</td><td>1,100</td></tr>
+<tr><td>6</td><td>Rank tests, permutation tests, the bootstrap</td><td>700</td></tr>
+<tr><td>7</td><td>Markov chains; conjugate Bayesian updating</td><td>700</td></tr>
+<tr><td>8</td><td>Graphics hooks</td><td>800 in graphics</td></tr>
+</table></div>
+<p>It will build on: Core, analytic (the distribution functions), linalg (regression) and discrete (counting and the seeded generator).</p>
+
+<h2>How the docs will be laid out</h2>
+<p>Like every library on the Shelf: this overview, an <a href="explore.html">Explore</a> page for trying things without writing code, a <a href="reference.html">Reference</a> listing every function, and one page per topic that explains the usage and the mathematics. Every page ends with a box of code you can edit and run.</p>
+<div class="cards" id="cards"></div>
+
+<h2>Until then</h2>
+<p>The box below already runs, with <code>@ratmath/core</code> in scope. It shows the kind of exactness the package is built on, done by hand.</p>
+<template data-runbox>
+// Finite probability is exact arithmetic on fractions.
+// The distribution of the sum of two dice:
+const dist = new Map();
+for (let a = 1; a &lt;= 6; a += 1) for (let b = 1; b &lt;= 6; b += 1) dist.set(a + b, (dist.get(a + b) ?? new Rational(0)).add(new Rational(1, 36)));
+for (const [s, p] of dist) PRINT(`P(sum = ${s}) =`, p.toString());
+let mean = new Rational(0), second = new Rational(0);
+for (const [s, p] of dist) { mean = mean.add(p.multiply(new Rational(s))); second = second.add(p.multiply(new Rational(s * s))); }
+PRINT("mean =", mean.toString(), "  variance =", second.subtract(mean.pow(2)).toString());
+plan.map((p) =&gt; `${p.phase}. ${p.contents}`)
+</template>
+</article>
+</main>
+</div>
+<script type="module">
+import { topicCards } from "./assets/site.js";
+topicCards(document.getElementById("cards"));
+</script>
+</body>
+</html>
