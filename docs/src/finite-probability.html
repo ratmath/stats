@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Finite probability · RatMath Stats</title>
+<meta name="description" content="Exact finite probability in @ratmath/stats: sample spaces, events, conditioning, independence, expectation, and Bayes&#x27; rule, all in fractions.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Exact</div>
+<h1>Finite probability</h1>
+<p class="lede">A finite distribution is a list of outcomes with a fraction for each. Events are functions of the outcome, and probabilities, conditional probabilities and expectations are sums of fractions, with nothing rounded.</p>
+
+<h2>Sample spaces</h2>
+<pre><code>import { finite, die, dice, coin, deck, draw, bayes } from "@ratmath/stats";
+
+const two = dice(2);                           // 36 outcomes, each a pair [a, b]
+two.prob(([a, b]) =&gt; a + b === 7);             // 1/6
+two.prob(([a, b]) =&gt; a + b &gt;= 10, ([a]) =&gt; a === 6);   // 1/2: given that the first die shows 6
+
+String(coin("2/3"));                           // "{ H: 2/3, T: 1/3 }"
+String(finite(["a", "b", "b"]));               // "{ a: 1/3, b: 2/3 }": repeats count each time
+String(finite({ red: "1/2", green: "1/3", blue: "1/6" }));</code></pre>
+<p><code>finite</code> takes a list of equally likely outcomes, a list with weights, an object or a <code>Map</code> of probabilities, or a family from the discrete library (every permutation, every subset, and so on). Probabilities that do not add up to 1 are refused unless you pass <code>{ normalize: true }</code>.</p>
+<p>An outcome can be a number, text, or a list of these. An event is a function from the outcome to true or false, a single outcome, or a <code>Set</code> of outcomes.</p>
+
+<h2>New distributions from old</h2>
+<pre><code>const sum = two.map(([a, b]) =&gt; a + b);        // the distribution of the total
+String(sum);    // "{ 2: 1/36, 3: 1/18, 4: 1/12, 5: 1/9, 6: 5/36, 7: 1/6, 8: 5/36, … }"
+
+die().sumOf(3).prob((s) =&gt; s &gt;= 16);           // 5/108, without listing the 216 triples
+two.given(([a, b]) =&gt; a !== b);                // the distribution after conditioning
+die().product(coin());                         // pairs [face, side], independent
+draw(deck(), 2).size;                          // 1326 two-card hands, each equally likely</code></pre>
+<p><code>map</code> sends each outcome through a function and adds up the probabilities that land together: that is the distribution of a random variable. <code>given</code> keeps the outcomes of an event and divides by its probability,</p>
+\[ P(A \mid B) = \frac{P(A \cap B)}{P(B)}, \]
+<p>and refuses when \(P(B) = 0\). <code>draw(items, k)</code> lists hands of \(k\) distinct items; with <code>{ ordered: true }</code> the order drawn matters, and with <code>{ replace: true, ordered: true }</code> items are put back. A finite distribution lists its outcomes, so it is limited to two million of them; for five-card hands, count with <a href="discrete-distributions.html"><code>hypergeometric</code></a> instead of listing.</p>
+
+<h2>Expectation and spread</h2>
+<pre><code>two.mean(([a, b]) =&gt; a + b);                   // 7
+two.variance(([a, b]) =&gt; a + b);               // 35/6
+show(two.sd(([a, b]) =&gt; a + b), 10);           // "2.4152294577": a square root, so certified
+two.independent(([a]) =&gt; a % 2 === 0, ([a, b]) =&gt; a + b === 7);   // true
+sum.quantile("9/10");                          // 10</code></pre>
+<p>The mean of \(f\) is \(\sum_\omega f(\omega)\,P(\omega)\) and the variance is \(E[f^2] - E[f]^2\), both exact. A standard deviation is exact when the variance is a perfect square and an enclosure otherwise. Two events are independent when \(P(A \cap B) = P(A)\,P(B)\) holds as an equation between fractions, which floating point cannot check.</p>
+
+<h2>Bayes' rule</h2>
+<pre><code>// 1 person in 100 has the condition; the test is right 95 times in 100 either way
+const b = bayes({ sick: "1/100", well: "99/100" }, { sick: "95/100", well: "5/100" });
+String(b.posterior);      // "{ sick: 19/118, well: 99/118 }"
+b.evidence;               // 59/1000: the chance of a positive result</code></pre>
+<p>For hypotheses \(H_i\) with priors \(P(H_i)\) and an observation \(D\),</p>
+\[ P(H_i \mid D) = \frac{P(D \mid H_i)\,P(H_i)}{\sum_j P(D \mid H_j)\,P(H_j)}. \]
+<p>The denominator is <code>evidence</code>, and <code>table</code> has one row per hypothesis with its prior, likelihood, joint probability and posterior. The posterior is a finite distribution, so it can be the prior of the next update.</p>
+<template data-runbox>
+// The birthday problem, exactly, and a posterior updated twice.
+const noMatch = (n) =&gt; {
+  let p = new Rational(1);
+  for (let i = 0; i &lt; n; i++) p = p.multiply(new Rational(365 - i, 365));
+  return p;
+};
+PRINT("23 people, some shared birthday:", show(new Rational(1).subtract(noMatch(23)), 6));
+
+// Two positive tests in a row.
+const likelihood = { sick: "95/100", well: "5/100" };
+const first = bayes({ sick: "1/100", well: "99/100" }, likelihood);
+const second = bayes(first.posterior, likelihood);
+PRINT("after one positive: ", String(first.posterior));
+PRINT("after two positives:", String(second.posterior));
+
+// Three dice: which total is most likely, and how likely?
+const total = die().sumOf(3);
+PRINT("modes:", total.modes().join(" and "), "each with probability", String(total.p(10)));
+total.prob((s) =&gt; s &gt;= 16)
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

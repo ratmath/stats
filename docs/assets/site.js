@@ -1,8 +1,8 @@
 // Shared page furniture for the stats docs: the contents column, the theme
 // switch and the code boxes. Add each topic page to PAGES as it is written.
 
-import * as A from "./stats.js?v=474a20ce3a";
-import { mountRunboxes } from "./runbox.js?v=474a20ce3a";
+import * as A from "./stats.js?v=f9485bdd3e";
+import { mountRunboxes } from "./runbox.js?v=f9485bdd3e";
 
 export { A };
 
@@ -10,8 +10,18 @@ export const PAGES = [
   { href: "index.html", title: "Overview" },
   { href: "reference.html", title: "Reference" },
   { href: "explore.html", title: "Explore" },
-  // { group: "Topics" },
-  // { href: "topic.html", title: "A topic", blurb: "One line about it" },
+  { group: "Exact" },
+  { href: "finite-probability.html", title: "Finite probability", blurb: "Sample spaces, conditioning, expectation and Bayes' rule in fractions" },
+  { href: "discrete-distributions.html", title: "Discrete distributions", blurb: "Binomial, hypergeometric, geometric and Poisson probabilities" },
+  { href: "descriptive.html", title: "Descriptive statistics", blurb: "Exact means, variances, named quantile rules, least squares" },
+  { href: "exact-tests.html", title: "Exact tests", blurb: "Binomial, Fisher and permutation tests with p-values as fractions" },
+  { group: "Certified" },
+  { href: "continuous-distributions.html", title: "Continuous distributions", blurb: "Normal, t, chi-square, F, gamma, beta: enclosures to any precision" },
+  { href: "certified-answers.html", title: "Certified answers", blurb: "Reading enclosures, and comparisons that can be too close to call" },
+  { group: "Simulated" },
+  { href: "sampling.html", title: "Seeded sampling", blurb: "A seeded generator, named streams, exact rational draws" },
+  { href: "models.html", title: "Models with noise", blurb: "A known truth disturbed by noise, contamination, censoring and more" },
+  { href: "experiments.html", title: "Experiments", blurb: "Coverage, size, power and bias, each with its sampling error" },
 ];
 
 export const h = (tag, attrs = {}, ...kids) => {

@@ -3,17 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Statistics Explorer</title>
-<meta property="og:title" content="Statistics Explorer">
+<title>Explore · RatMath Stats</title>
+<meta property="og:title" content="Explore · RatMath Stats">
 <meta property="og:description" content="Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests and regression.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ratmath.com/stats/explore.html">
-<meta name="description" content="Try @ratmath/stats without writing a program.">
+<meta name="description" content="Try @ratmath/stats in the page: a distribution calculator with certified digits, exact summaries of your data, and a simulation that tests estimators on contaminated data.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
-<link rel="stylesheet" href="assets/style.css?v=474a20ce3a">
-<script type="module" src="assets/site.js?v=474a20ce3a"></script>
+<link rel="stylesheet" href="https://ratmath.com/assets/katex/0.19.1/katex.min.css">
+<link rel="stylesheet" href="assets/style.css?v=f9485bdd3e">
+<script type="module" src="assets/site.js?v=f9485bdd3e"></script>
 </head>
 <body>
 <div class="shell">
@@ -22,18 +23,55 @@
 <article>
 <div class="eyebrow">Explore</div>
 <h1>Explore</h1>
-<p class="lede">This page will be a calculator for everything in the library: type an expression, see an exact answer, click an example to change it.</p>
-<p class="notice"><strong>Planned, not built yet.</strong> This site is the frame the package will grow into. The full plan is in the <a href="https://github.com/ratmath/ratmath/blob/main/docs/design/library-roadmap.md#6-a-probability-and-statistics-package-ratmathstats">library roadmap</a>, and the <a href="https://ratmath.com/shelf/">RatMath Shelf</a> page lists what exists across all the libraries.</p>
-<p>There is nothing to explore yet. The first phase is: <strong>Finite probability, discrete distributions, descriptive statistics, exact tests</strong>. When it is built its operations appear here.</p>
-<p>In the meantime the code box below runs JavaScript with <code>@ratmath/core</code> in scope.</p>
+<p class="lede">A distribution calculator that prints only digits it can certify, exact summaries of data you type, and an experiment: choose how dirty the data are and see which estimator copes.</p>
+
+<h2>A distribution</h2>
+<div class="demo">
+<div class="demo-row">
+<label>Distribution<select id="ex-dist"></select></label>
+<label>Parameters<input id="ex-params" class="text" value="0, 1" spellcheck="false"></label>
+<label>x<input id="ex-x" class="text" value="1.96" size="8" spellcheck="false"></label>
+<label>p<input id="ex-p" class="text" value="0.975" size="8" spellcheck="false"></label>
+<label>Digits<input id="ex-digits" class="text" type="number" min="1" max="60" value="20" size="4"></label>
+</div>
+<div id="ex-dout"></div>
+</div>
+<p>Parameters are exact: type <code>1/3</code> or <code>0.05</code>. Raise the digits and the precision follows.</p>
+
+<h2>Your data</h2>
+<div class="demo">
+<textarea id="ex-data" class="text" rows="3" aria-label="Data" spellcheck="false">2, 4, 4, 4, 5, 5, 7, 9, 21</textarea>
+<div id="ex-sout"></div>
+</div>
+<p>Numbers separated by commas or spaces. Fractions such as <code>7/2</code> are welcome.</p>
+
+<h2>An experiment</h2>
+<div class="demo">
+<div class="demo-row">
+<label>Sample size<input id="ex-n" class="text" type="number" min="3" max="200" value="25" size="5"></label>
+<label>Contamination rate<input id="ex-rate" class="text" type="range" min="0" max="0.4" step="0.02" value="0.1"></label>
+<label>Contamination sd<input id="ex-csd" class="text" type="number" min="1" max="50" value="10" size="5"></label>
+<label>Runs<input id="ex-runs" class="text" type="number" min="100" max="5000" step="100" value="1000" size="6"></label>
+<label>Seed<input id="ex-seed" class="text" value="1" size="6" spellcheck="false"></label>
+</div>
+<div id="ex-eout"></div>
+</div>
+<p>The truth is 10 and the clean noise is normal with standard deviation 1. A share of the observations, set by the slider, get noise with the larger standard deviation instead. The table shows each estimator's root mean squared error, and how often the usual <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6151em;"></span><span class="mord mathnormal">t</span></span></span></span> interval contains the truth.</p>
 <section class="runbox" aria-label="Runnable code">
   <div class="runbox-head"><strong>Try it</strong><span>Edit the code and run it with <code>@ratmath/stats</code> and Core's <code>Rational</code> in scope. The last line's value is shown; <code>PRINT(…)</code> adds lines, <code>TEX(…)</code> typesets math.</span></div>
-  <textarea spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Code">// Core's exact numbers are available here.
-const third = new Rational(1, 3);
-PRINT("1/3 + 1/6 =", third.add(new Rational(1, 6)).toString());
-PRINT("(2/3)^10 =", new Rational(2, 3).pow(10).toString());
-PRINT("0.1 + 0.2 in floating point:", 0.1 + 0.2, "  exactly:", new Rational(1, 10).add(new Rational(2, 10)).toString());
-plan[0].contents</textarea>
+  <textarea spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Code">// The page above, as code.
+PRINT("P(Z ≤ 1.96) =", show(normal(0, 1).cdf("1.96"), 20));
+PRINT("97.5% point =", show(normal(0, 1).quantile("0.975"), 20));
+
+const data = [2, 4, 4, 4, 5, 5, 7, 9, 21];
+const s = summary(data);
+PRINT("mean", String(s.mean), " median", String(s.median), " sd", show(s.sd, 6), " outliers", s.outliers.join(", "));
+
+const dirty = model({ truth: 10, noise: normal(0, 1), contamination: { rate: 0.1, noise: normal(0, 10) } });
+for (const [name, f] of [["mean", fast.mean], ["median", fast.median]]) {
+  const study = estimatorStudy({ model: dirty, n: 25, estimator: (d) =&gt; f(d.y), truth: 10, runs: 1000, seed: 1 });
+  PRINT(name.padEnd(7), "rmse", study.rmse.toFixed(3));
+}</textarea>
   <div class="runbox-bar"><button type="button" data-run>Run</button><button type="button" class="ghost" data-reset>Reset</button><span class="runbox-meta">Ctrl/⌘ + Enter runs</span></div>
   <div class="runbox-out" aria-live="polite"></div>
 </section>
@@ -41,5 +79,132 @@ plan[0].contents</textarea>
 </article>
 </main>
 </div>
+<script type="module">
+import { A as S, h } from "./assets/site.js?v=f9485bdd3e";
+const $ = (id) => document.getElementById(id);
+const row = (label, f) => {
+  let text;
+  let bad = false;
+  try {
+    text = f();
+  } catch (e) {
+    text = e.message;
+    bad = true;
+  }
+  const dd = h("dd", {}, String(text));
+  if (bad) dd.style.color = "var(--muted)";
+  return [h("dt", {}, label), dd];
+};
+const fail = (out, e) => out.replaceChildren(h("div", { class: "out err" }, e.message));
+
+const DISTS = {
+  normal: ["0, 1", "mean, sd"], studentT: ["9", "degrees of freedom"], chiSquare: ["4", "degrees of freedom"], fDist: ["3, 20", "df1, df2"],
+  gamma: ["3, 2", "shape, rate"], beta: ["2, 3", "a, b"], exponential: ["2", "rate"], lognormal: ["0, 1", "mu, sigma"],
+  weibull: ["2, 1", "shape, scale"], uniform: ["0, 4", "a, b"], cauchy: ["0, 1", "location, scale"],
+  binomial: ["10, 1/3", "n, p"], poisson: ["3", "rate"], hypergeometric: ["52, 13, 5", "N, K, n"], geometric: ["1/6", "p"],
+};
+const sel = $("ex-dist");
+for (const name of Object.keys(DISTS)) sel.append(h("option", {}, name));
+sel.addEventListener("change", () => {
+  $("ex-params").value = DISTS[sel.value][0];
+  distPanel();
+});
+
+function distPanel() {
+  const out = $("ex-dout");
+  try {
+    const params = $("ex-params").value.split(",").map((t) => t.trim()).filter(Boolean);
+    const d = S[sel.value](...params);
+    const digits = Math.max(1, Math.min(60, Number($("ex-digits").value) || 20));
+    const bits = Math.ceil(digits * 3.33) + 16;
+    const x = $("ex-x").value.trim();
+    const p = $("ex-p").value.trim();
+    const discrete = d instanceof S.Discrete;
+    const opt = { bits };
+    const rows = [
+      row("distribution", () => `${d} (${DISTS[sel.value][1]}); answers are ${d.kind}`),
+      row("mean, variance", () => `${d.mean === null ? "undefined" : S.show(d.mean, 6)}, ${d.variance === null ? "undefined" : S.show(d.variance, 6)}`),
+      discrete ? row(`P(X = ${x})`, () => { const v = d.pmf(x, opt); return `${S.show(v, digits)}${v instanceof S.RationalInterval ? "" : `  =  ${v}`}`; }) : row(`density at ${x}`, () => S.show(d.pdf(x, opt), digits)),
+      row(`P(X ≤ ${x})`, () => { const v = d.cdf(x, opt); return `${S.show(v, digits)}${discrete && !(v instanceof S.RationalInterval) ? `  =  ${v}` : ""}`; }),
+      row(`P(X > ${x})`, () => S.show(d.sf(x, opt), digits)),
+      row(`quantile at ${p}`, () => S.show(d.quantile(p, opt), digits)),
+    ];
+    out.replaceChildren(h("dl", { class: "kv out" }, ...rows));
+  } catch (e) {
+    fail(out, e);
+  }
+}
+
+function dataPanel() {
+  const out = $("ex-sout");
+  try {
+    const data = $("ex-data").value.split(/[\s,;]+/).filter(Boolean);
+    const s = S.summary(data);
+    const rows = [
+      row("n", () => s.n),
+      row("mean", () => `${s.mean}  =  ${S.show(s.mean, 6)}`),
+      row("five numbers", () => [s.min, s.q1, s.median, s.q3, s.max].join(",  ")),
+      row("variance", () => `${s.variance}  =  ${S.show(s.variance, 6)}`),
+      row("sd", () => S.show(s.sd, 12)),
+      row("trimmed mean (10%)", () => S.show(S.trimmedMean(data, "1/10"), 6)),
+      row("median absolute deviation", () => String(S.mad(data))),
+      row("modes", () => s.modes.join(", ")),
+      row("outliers", () => (s.outliers.length ? s.outliers.join(", ") : "none beyond 1.5 interquartile ranges")),
+    ];
+    out.replaceChildren(h("dl", { class: "kv out" }, ...rows));
+  } catch (e) {
+    fail(out, e);
+  }
+}
+
+let timer = null;
+function experimentPanel() {
+  const out = $("ex-eout");
+  clearTimeout(timer);
+  out.classList.add("busy");
+  timer = setTimeout(() => {
+    try {
+      const n = Math.max(3, Math.min(200, Number($("ex-n").value) || 25));
+      const rate = Number($("ex-rate").value);
+      const csd = $("ex-csd").value || "10";
+      const runs = Math.max(100, Math.min(5000, Number($("ex-runs").value) || 1000));
+      const seed = $("ex-seed").value;
+      const spec = { truth: 10, noise: S.normal(0, 1) };
+      if (rate > 0) spec.contamination = { rate, noise: S.normal(0, csd) };
+      const m = S.model(spec);
+      const t = S.studentT(n - 1).fast.quantile(0.975);
+      const interval = (y) => {
+        const half = (t * S.fast.sd(y)) / Math.sqrt(y.length);
+        return [S.fast.mean(y) - half, S.fast.mean(y) + half];
+      };
+      const est = { mean: S.fast.mean, median: S.fast.median, "trimmed mean (10%)": (y) => S.fast.trimmedMean(y, 0.1) };
+      const table = h("table", { class: "data" }, h("tr", {}, h("th", {}, "estimator"), h("th", {}, "mean"), h("th", {}, "bias ± 1.96 se"), h("th", {}, "rmse")));
+      let best = null;
+      const studies = Object.entries(est).map(([name, f]) => [name, S.estimatorStudy({ model: m, n, estimator: (d) => f(d.y), truth: 10, runs, seed })]);
+      for (const [, s] of studies) if (best === null || s.rmse < best) best = s.rmse;
+      for (const [name, s] of studies) {
+        table.append(h("tr", {}, h("td", {}, name), h("td", {}, s.mean.toFixed(4)), h("td", {}, `${s.bias.toFixed(4)} ± ${(1.96 * s.standardError).toFixed(4)}`), h("td", { class: s.rmse === best ? "hl" : "" }, s.rmse.toFixed(4))));
+      }
+      const cov = S.coverage({ model: m, n, interval: (d) => interval(d.y), truth: 10, runs, seed });
+      const verdict = { inside: "consistent with 95%", above: "below 95%: the interval is too narrow", below: "above 95%: the interval is wider than it needs to be" }[cov.compare("0.95")];
+      out.replaceChildren(
+        h("div", { class: "out" },
+          h("div", {}, `${m}`),
+          table,
+          h("dl", { class: "kv" }, h("dt", {}, "t interval coverage"), h("dd", {}, `${cov}`), h("dt", {}, "verdict"), h("dd", {}, verdict), h("dt", {}, "contamination"), h("dd", {}, `${Math.round(rate * 100)}% of observations`))));
+    } catch (e) {
+      fail(out, e);
+    }
+    out.classList.remove("busy");
+  }, 30);
+}
+
+for (const id of ["ex-params", "ex-x", "ex-p", "ex-digits"]) $(id).addEventListener("input", distPanel);
+$("ex-data").addEventListener("input", dataPanel);
+for (const id of ["ex-n", "ex-rate", "ex-csd", "ex-runs", "ex-seed"]) $(id).addEventListener("input", experimentPanel);
+distPanel();
+dataPanel();
+experimentPanel();
+</script>
 </body>
 </html>

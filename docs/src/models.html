@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Models with noise · RatMath Stats</title>
+<meta name="description" content="Generate data from a known model in @ratmath/stats and disturb it: additive noise, unequal spread, contamination, error in x, rounding, censoring and missing values.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Simulated</div>
+<h1>Models with noise</h1>
+<p class="lede">Choose the truth. Say how observations depart from it. Draw data, hand the data to a procedure, and see whether it finds the truth you chose. Real data never come with the answer attached; these do.</p>
+
+<h2>A truth and its noise</h2>
+<pre><code>import { model, normal, uniform, fast } from "@ratmath/stats";
+
+const line = model({
+  truth: [2, 0.5],              // y = 2 + 0.5·x
+  x: uniform(0, 10),            // where the x values come from
+  noise: normal(0, 1),          // added to each observation
+});
+String(line);     // "model(truth 2 + 0.5·x; x from uniform(0, 10); noise normal(0, 1))"
+
+const data = line.sample(50, 42);         // 50 observations, seed 42
+String(data);
+// "50 simulated observations from model(…) (seed 42; 0 contaminated, 0 censored, 0 missing)"
+data.x; data.y;                           // what was observed
+data.trueY;                               // the truth at each x, before the noise
+fast.leastSquares(data.x, data.y).slope;  // 0.4197866209598898: one estimate of 0.5</code></pre>
+<p><code>truth</code> is a number (every observation has this value, before noise), a list of coefficients \(b_0, b_1, \dots\) of the polynomial \(b_0 + b_1 x + \cdots\), or any function of \(x\). <code>x</code> is a list that is reused in order (a fixed design), a distribution, or a function of the generator; leave it out for a model with no predictor.</p>
+<p>The data set remembers where it came from: <code>kind</code> is <code>"simulated"</code>, and <code>seed</code> and <code>model</code> reproduce it.</p>
+
+<h2>Departures</h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Part</th><th>What it does</th><th>What it tests</th></tr>
+<tr><td>noise</td><td>a distribution added to each observation: \(y = f(x) + \varepsilon\)</td><td>The baseline. Try a skewed or heavy-tailed distribution in place of the normal.</td></tr>
+<tr><td>spread</td><td>a function of \(x\) that multiplies the noise: \(y = f(x) + s(x)\,\varepsilon\)</td><td>Procedures that assume equal variance.</td></tr>
+<tr><td>contamination</td><td><code>{ rate, noise }</code>: with probability <code>rate</code> the noise comes from a second distribution; or <code>{ rate, value }</code>: the observation is replaced outright</td><td>Outliers. Means against medians, least squares against robust fits.</td></tr>
+<tr><td>xNoise</td><td>a distribution added to the <em>recorded</em> \(x\); \(y\) is made from the true \(x\)</td><td>Errors in variables: the slope estimate shrinks toward zero.</td></tr>
+<tr><td>round</td><td>observations are rounded to multiples of a step (or <code>{ x, y }</code> steps)</td><td>Coarse instruments, ties.</td></tr>
+<tr><td>censor</td><td><code>{ below, above }</code>: values past a limit are recorded as the limit</td><td>Detection limits, a scale that tops out.</td></tr>
+<tr><td>missing</td><td>the probability an observation is lost (recorded as <code>NaN</code>)</td><td>Handling of gaps. <code>data.complete()</code> returns the pairs that are present.</td></tr>
+</table></div>
+<p>The data set records what happened to each observation: <code>contaminated</code>, <code>censored</code> and <code>missing</code> are lists of flags, and <code>trueX</code> and <code>trueY</code> are the values before any departure. A procedure never sees these; you use them to mark its homework.</p>
+
+<h2>One change at a time</h2>
+<pre><code>const dirty = line.with({ contamination: { rate: 0.1, noise: normal(0, 10) } });
+const d2 = dirty.sample(50, 42);
+String(d2);       // "… (seed 42; 7 contaminated, 0 censored, 0 missing)"
+d2.x[0] === data.x[0];                    // true: the same x values
+fast.leastSquares(d2.x, d2.y).r2;         // 0.115…, down from 0.701…</code></pre>
+<p><code>with</code> returns the same model with some parts changed. Each part of a model draws from its own <a href="sampling.html">named stream</a>, so with the same seed the two data sets share their \(x\) values, and the observations that were not contaminated are identical. The difference between the two fits is caused by the contamination and by nothing else.</p>
+
+<h2>What the departures do to a slope</h2>
+<p>For a line \(y = \beta_0 + \beta_1 x + \varepsilon\) fitted by least squares:</p>
+<ul>
+<li>Noise in \(y\) with mean zero leaves the slope unbiased, whatever its distribution; contamination with mean zero only makes it noisier.</li>
+<li>Noise in the recorded \(x\) with variance \(\sigma_u^2\) biases the slope toward zero by the factor \(\sigma_x^2 / (\sigma_x^2 + \sigma_u^2)\). With \(x\) uniform on \((0, 10)\), \(\sigma_x^2 = 100/12\), and with \(\sigma_u = 2\) the factor is \(0.676\): a true slope of \(0.5\) is estimated as about \(0.338\).</li>
+<li>Censoring \(y\) from above flattens the top of the line, and the slope with it.</li>
+</ul>
+<p>The code box measures each of these, and the <a href="experiments.html">experiments</a> page turns such measurements into coverage and power.</p>
+
+<h2>Exact data</h2>
+<p><code>sample(n, seed, { exact: true })</code> makes every draw a fraction (see <a href="sampling.html">exact draws</a>), so that exact statistics of the data, such as a mean as a fraction or an exact permutation test, are reproducible to the last digit. It is much slower and meant for small samples.</p>
+<template data-runbox>
+// One truth, four ways to spoil it. Does least squares still find the slope 0.5?
+const line = model({ truth: [2, 0.5], x: uniform(0, 10), noise: normal(0, 1) });
+const versions = {
+  "clean":              line,
+  "10% contaminated":   line.with({ contamination: { rate: 0.1, noise: normal(0, 10) } }),
+  "x recorded ± 2":     line.with({ xNoise: normal(0, 2) }),
+  "censored above 6":   line.with({ censor: { above: 6 } }),
+  "spread grows with x": line.with({ spread: (x) =&gt; 0.2 + 0.2 * x }),
+};
+for (const [name, m] of Object.entries(versions)) {
+  const study = estimatorStudy({ model: m, n: 50, truth: 0.5, runs: 1000, seed: 1,
+    estimator: (data) =&gt; fast.leastSquares(data.x, data.y).slope });
+  PRINT(name.padEnd(20), `mean slope ${study.mean.toFixed(3)}, sd ${study.sd.toFixed(3)}, bias ${study.bias.toFixed(3)} ± ${(1.96 * study.standardError).toFixed(3)}`);
+}
+// The theory for error in x: 0.5 × (100/12) / (100/12 + 4)
+PRINT("predicted slope with x error:", (0.5 * (100 / 12) / (100 / 12 + 4)).toFixed(3));
+
+// One data set, to look at.
+String(versions["censored above 6"].sample(50, 42))
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

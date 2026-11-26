@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Experiments · RatMath Stats</title>
+<meta property="og:title" content="Experiments · RatMath Stats">
+<meta property="og:description" content="Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests and regression.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ratmath.com/stats/experiments.html">
+<meta name="description" content="Simulation experiments in @ratmath/stats: coverage of intervals, size and power of tests, and bias of estimators, each with its seed and sampling error.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://ratmath.com/assets/katex/0.19.1/katex.min.css">
+<link rel="stylesheet" href="assets/style.css?v=f9485bdd3e">
+<script type="module" src="assets/site.js?v=f9485bdd3e"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Simulated</div>
+<h1>Experiments</h1>
+<p class="lede">Draw many data sets from a model that is known, run a procedure on each, and count how often it is right. An experiment's answer is itself a statistic, so it comes with its own interval: you can tell a real shortfall in coverage from the luck of the draw.</p>
+
+<h2>How often</h2>
+<pre><code>import { howOften, die, dice } from "@ratmath/stats";
+
+// five dice all different: by simulation, then exactly
+const sim = howOften({ draw: (rng) =&gt; die().samples(5, rng), event: (roll) =&gt; new Set(roll).size === 5, runs: 5000, seed: 9 });
+String(sim);    // "0.0930 (simulated: 465 of 5000 runs, seed 9; 95% interval 0.0851 to 0.1014)"
+sim.rate;       // 93/1000: hits over runs, exactly
+sim.interval;   // { low, high, level }: Clopper and Pearson's interval for the true rate
+
+const exact = dice(5).prob((roll) =&gt; new Set(roll).size === 5);   // 5/54 = 0.0926
+sim.compare(exact);     // "inside"</code></pre>
+<p>Data come from <code>{ model, n }</code> (a <a href="models.html">model</a> and a sample size) or from <code>draw(rng)</code>, any function of the generator. The number of hits in <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi></mrow><annotation encoding="application/x-tex">R</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0077em;">R</span></span></span></span> independent runs is binomial<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>R</mi><mo separator="true">,</mo><mi>π</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(R, \pi)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.0077em;">R</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">π</span><span class="mclose">)</span></span></span></span> where <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>π</mi></mrow><annotation encoding="application/x-tex">\pi</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.0359em;">π</span></span></span></span> is the true rate, so the <a href="exact-tests.html">exact interval for a proportion</a> applies to the experiment itself. <code>compare(value)</code> says whether a stated value is <code>"below"</code>, <code>"inside"</code> or <code>"above"</code> that interval.</p>
+
+<h2>Coverage of an interval</h2>
+<pre><code>import { coverage, binomial, proportionInterval } from "@ratmath/stats";
+
+const wald = coverage({
+  draw: (rng) =&gt; binomial(30, "1/10").sample(rng),         // a count out of 30, true p = 1/10
+  interval: (k) =&gt; { const ci = proportionInterval(k, 30, { method: "wald" }); return [ci.low, ci.high]; },
+  truth: "1/10", runs: 2000, seed: 1,
+});
+String(wald);          // "0.8200 (simulated: 1640 of 2000 runs, seed 1; 95% interval 0.8024 to 0.8366)"
+wald.compare("0.95");  // "above": 95% is above anything the experiment supports
+wald.meanWidth;        // 0.2015…</code></pre>
+<p>A 95% confidence interval is a procedure that contains the truth in 95% of samples. <code>coverage</code> measures that directly. Here the textbook interval for a proportion, at <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>30</mn></mrow><annotation encoding="application/x-tex">n = 30</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.4306em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6444em;"></span><span class="mord">30</span></span></span></span> and <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">p = 0.1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6444em;"></span><span class="mord">0.1</span></span></span></span>, covers about 82% of the time, and the experiment's own interval shows that the shortfall is not luck. With <code>method: "wilson"</code> the same experiment gives 0.9815 and with <code>"exact"</code> 0.9920.</p>
+
+<h2>Size and power of a test</h2>
+<pre><code>import { rejectionRate, powerCurve, binomialTest } from "@ratmath/stats";
+
+const toss = (p) =&gt; (rng) =&gt; binomial(20, p).sample(rng);
+const test = (k) =&gt; binomialTest(k, 20, "1/2");
+
+String(rejectionRate({ draw: toss("1/2"), test, alpha: "0.05", runs: 2000, seed: 1 }));
+// "0.0415 (simulated: 83 of 2000 runs, …)": the null is true, so this is the test's size
+String(rejectionRate({ draw: toss("7/10"), test, runs: 2000, seed: 1 }));
+// "0.4110 (simulated: 822 of 2000 runs, …)": the null is false, so this is its power
+
+powerCurve({ effects: ["1/2", "6/10", "7/10", "8/10"], draw: toss, test, runs: 1000, seed: 1 });
+// rates 0.033, 0.131, 0.417, 0.804</code></pre>
+<p><code>test</code> returns a p-value, a test result, or true for "reject". When the model satisfies the null hypothesis the rejection rate estimates the test's size, which should not exceed <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>α</mi></mrow><annotation encoding="application/x-tex">\alpha</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span></span></span></span>; otherwise it estimates the power. <code>powerCurve</code> runs the same experiment at each of several effects with the same seed, so the curve is not roughened by different random numbers at each point.</p>
+
+<h2>An estimator's bias and error</h2>
+<pre><code>import { estimatorStudy, model, normal, fast } from "@ratmath/stats";
+
+const m = model({ truth: 10, noise: normal(0, 1), contamination: { rate: 0.1, noise: normal(0, 10) } });
+const s = estimatorStudy({ model: m, n: 25, estimator: (data) =&gt; fast.median(data.y), truth: 10, runs: 4000, seed: 2 });
+String(s);   // "mean 10.003, sd 0.27412, bias 0.0031262 ± 0.008495, rmse 0.2741 (simulated: 4000 runs, seed 2)"</code></pre>
+<p>The result has the estimates themselves, their mean and standard deviation, and with a truth the bias and the root mean squared error <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mrow><mi>E</mi><mo stretchy="false">[</mo><mo stretchy="false">(</mo><mover accent="true"><mi>θ</mi><mo>^</mo></mover><mo>−</mo><mi>θ</mi><msup><mo stretchy="false">)</mo><mn>2</mn></msup><mo stretchy="false">]</mo></mrow></msqrt></mrow><annotation encoding="application/x-tex">\sqrt{E[(\hat\theta - \theta)^2]}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:1.84em;vertical-align:-0.5011em;"></span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3389em;"><span class="svg-align" style="top:-3.8em;"><span class="pstrut" style="height:3.8em;"></span><span class="mord" style="padding-left:1em;"><span class="mord mathnormal" style="margin-right:0.0576em;">E</span><span class="mopen">[(</span><span class="mord katex-accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.9579em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="margin-right:0.0278em;">θ</span></span><span style="top:-3.2634em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.1667em;"><span class="mord">^</span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord mathnormal" style="margin-right:0.0278em;">θ</span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.7401em;"><span style="top:-2.989em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mclose">]</span></span></span><span style="top:-3.2989em;"><span class="pstrut" style="height:3.8em;"></span><span class="hide-tail" style="min-width:1.02em;height:1.88em;"><svg xmlns="http://www.w3.org/2000/svg" width="400em" height="1.88em" viewBox="0 0 400000 1944" preserveAspectRatio="xMinYMin slice"><path d="M983 90
+l0 -0
+c4,-6.7,10,-10,18,-10 H400000v40
+H1013.1s-83.4,268,-264.1,840c-180.7,572,-277,876.3,-289,913c-4.7,4.7,-12.7,7,-24,7
+s-12,0,-12,0c-1.3,-3.3,-3.7,-11.7,-7,-25c-35.3,-125.3,-106.7,-373.3,-214,-744
+c-10,12,-21,25,-33,39s-32,39,-32,39c-6,-5.3,-15,-14,-27,-26s25,-30,25,-30
+c26.7,-32.7,52,-63,76,-91s52,-60,52,-60s208,722,208,722
+c56,-175.3,126.3,-397.3,211,-666c84.7,-268.7,153.8,-488.2,207.5,-658.5
+c53.7,-170.3,84.5,-266.8,92.5,-289.5z
+M1001 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.5011em;"><span></span></span></span></span></span></span></span></span>. The bias is reported as <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>bias</mtext><mo>±</mo><mn>1.96</mn><mtext> </mtext><mtext>se</mtext></mrow><annotation encoding="application/x-tex">\text{bias} \pm 1.96\,\text{se}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.7778em;vertical-align:-0.0833em;"></span><span class="mord text"><span class="mord">bias</span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">±</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6444em;"></span><span class="mord">1.96</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord text"><span class="mord">se</span></span></span></span></span>, where <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext>se</mtext><mo>=</mo><mi>s</mi><mi mathvariant="normal">/</mi><msqrt><mi>R</mi></msqrt></mrow><annotation encoding="application/x-tex">\text{se} = s/\sqrt{R}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.4306em;"></span><span class="mord text"><span class="mord">se</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:1.1767em;vertical-align:-0.25em;"></span><span class="mord mathnormal">s</span><span class="mord">/</span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.9267em;"><span class="svg-align" style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord" style="padding-left:0.833em;"><span class="mord mathnormal" style="margin-right:0.0077em;">R</span></span></span><span style="top:-2.8867em;"><span class="pstrut" style="height:3em;"></span><span class="hide-tail" style="min-width:0.853em;height:1.08em;"><svg xmlns="http://www.w3.org/2000/svg" width="400em" height="1.08em" viewBox="0 0 400000 1080" preserveAspectRatio="xMinYMin slice"><path d="M95,702
+c-2.7,0,-7.17,-2.7,-13.5,-8c-5.8,-5.3,-9.5,-10,-9.5,-14
+c0,-2,0.3,-3.3,1,-4c1.3,-2.7,23.83,-20.7,67.5,-54
+c44.2,-33.3,65.8,-50.3,66.5,-51c1.3,-1.3,3,-2,5,-2c4.7,0,8.7,3.3,12,10
+s173,378,173,378c0.7,0,35.3,-71,104,-213c68.7,-142,137.5,-285,206.5,-429
+c69,-144,104.5,-217.7,106.5,-221
+l0 -0
+c5.3,-9.3,12,-14,20,-14
+H400000v40H845.2724
+s-225.272,467,-225.272,467s-235,486,-235,486c-2.7,4.7,-9,7,-19,7
+c-6,0,-10,-1,-12,-3s-194,-422,-194,-422s-65,47,-65,47z
+M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1133em;"><span></span></span></span></span></span></span></span></span> is the standard error of the mean of the estimates: an approximate 95% interval, in floating point, and labelled simulated.</p>
+
+<h2>What an experiment can and cannot say</h2>
+<p>An experiment is evidence about one model, one sample size and one procedure. Its interval covers the sampling error of the simulation and nothing else. When an exact answer is available, as for the dice above or the power of an exact test (a finite sum), compute it; use simulation for what cannot be counted, and say which you did. The library's labels are there so that this is never ambiguous.</p>
+<section class="runbox" aria-label="Runnable code">
+  <div class="runbox-head"><strong>Try it</strong><span>Edit the code and run it with <code>@ratmath/stats</code> and Core's <code>Rational</code> in scope. The last line's value is shown; <code>PRINT(…)</code> adds lines, <code>TEX(…)</code> typesets math.</span></div>
+  <textarea spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Code">// Mean, median or trimmed mean? It depends on whether the data are clean.
+const clean = model({ truth: 10, noise: normal(0, 1) });
+const dirty = clean.with({ contamination: { rate: 0.1, noise: normal(0, 10) } });
+const estimators = { mean: fast.mean, median: fast.median, "trimmed 10%": (y) =&gt; fast.trimmedMean(y, 0.1) };
+
+for (const [label, m] of [["clean", clean], ["10% contaminated", dirty]]) {
+  PRINT(label);
+  for (const [name, f] of Object.entries(estimators)) {
+    const s = estimatorStudy({ model: m, n: 25, estimator: (data) =&gt; f(data.y), truth: 10, runs: 2000, seed: 2 });
+    PRINT("  " + name.padEnd(12), "rmse", s.rmse.toFixed(3));
+  }
+}
+
+// Does the t interval keep its 95% when the noise is skewed?
+const t = studentT(14).fast.quantile(0.975);
+const tInterval = (y) =&gt; {
+  const half = t * fast.sd(y) / Math.sqrt(y.length);
+  return [fast.mean(y) - half, fast.mean(y) + half];
+};
+const normalNoise = coverage({ model: clean, n: 15, interval: (d) =&gt; tInterval(d.y), truth: 10, runs: 2000, seed: 3 });
+const skewedNoise = coverage({ model: model({ truth: 0, noise: exponential(1) }), n: 15, interval: (d) =&gt; tInterval(d.y), truth: 1, runs: 2000, seed: 3 });
+PRINT("normal noise:     ", String(normalNoise), "→ 95% is", normalNoise.compare("0.95"));
+PRINT("exponential noise:", String(skewedNoise), "→ 95% is", skewedNoise.compare("0.95"));
+skewedNoise.meanWidth</textarea>
+  <div class="runbox-bar"><button type="button" data-run>Run</button><button type="button" class="ghost" data-reset>Reset</button><span class="runbox-meta">Ctrl/⌘ + Enter runs</span></div>
+  <div class="runbox-out" aria-live="polite"></div>
+</section>
+<footer class="sitelinks"><a href="https://github.com/ratmath/stats">GitHub</a> · <a href="https://ratmath.com/">ratmath.com</a> · <a href="https://ratmath.com/shelf/">shelf</a> · <a href="https://ratmath.com/core/">core</a></footer>
+</article>
+</main>
+</div>
+</body>
+</html>
