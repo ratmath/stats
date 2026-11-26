@@ -3,7 +3,7 @@
 Probability and statistics for [RatMath](https://ratmath.com/), part of the
 [RatMath Shelf](https://ratmath.com/shelf/).
 
-**Status: phases 1 to 5 of 8 are built.** Docs: <https://ratmath.com/stats/>.
+**Status: phases 1 to 7 of 8 are built.** Docs: <https://ratmath.com/stats/>.
 
 Probability and statistics in one library, with three kinds of answer that are
 never mixed up:
@@ -20,7 +20,9 @@ Standard inference sits on top: z, t, chi-square and F tests, proportions,
 fitted distributions, linear regression and analysis of variance. Statistics
 such as t², X² and F stay exact fractions, p-values are certified, and seeded
 experiments in the test suite check that intervals cover and tests keep their
-stated size.
+stated size. Rank tests and Kolmogorov–Smirnov tests count their null
+distributions exactly; the bootstrap is exact for small samples. Markov chains
+and conjugate Bayesian updating are exact too.
 
 Data can be generated from a model you choose, disturbed with noise,
 contamination, error in x, rounding, censoring and missing values, and handed
@@ -48,8 +50,8 @@ String(estimatorStudy({ model: line, n: 50, truth: 0.5, runs: 2000, seed: 1,
 | 3 | Seeded generation, models with noise and contamination, experiments | built |
 | 4 | Estimation, confidence intervals, the standard tests | built |
 | 5 | Regression and analysis of variance | built |
-| 6 | Rank tests, permutation tests, the bootstrap | planned |
-| 7 | Markov chains; conjugate Bayesian updating | planned |
+| 6 | Rank tests, permutation tests, the bootstrap | built |
+| 7 | Markov chains; conjugate Bayesian updating | built |
 | 8 | Graphics hooks | planned |
 
 The plan is in the

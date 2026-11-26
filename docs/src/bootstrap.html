@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The bootstrap · RatMath Stats</title>
+<meta name="description" content="The bootstrap in @ratmath/stats: standard errors, bias and percentile or basic intervals, exact over every resample for small samples and simulated from a seed otherwise.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Nonparametric</div>
+<h1>The bootstrap</h1>
+<p class="lede">To see how much a statistic would vary from sample to sample, resample the sample: draw n values with replacement, recompute, and repeat. For a small sample every resample can be listed and weighed, so the bootstrap distribution is exact; otherwise it is simulated from a seed.</p>
+<h2>Exact, for small samples</h2>
+<pre><code>import { bootstrap } from "@ratmath/stats";
+
+const b = bootstrap([1, 2, 3, 4, 10]);
+String(b);       // "mean 4; bootstrap se 1.41421, bias 0; percentile 0.950 interval [1.80000, 7.20000]
+                 //  (exact over 126 distinct resamples)"
+b.variance;      // 2: the plug-in variance 10 divided by n = 5
+b.interval;      // { low: 9/5, high: 36/5, level: 19/20 }
+b.distribution;  // every value the mean can take (39 of them), with its exact probability</code></pre>
+<p>A resample is a multiset of size \(n\) from the \(n\) data points: there are \(\binom{2n-1}{n}\) of them, and the one that uses point \(i\) exactly \(c_i\) times has probability</p>
+\[ \frac{n!}{c_1!\cdots c_n!\; n^n}. \]
+<p>When there are at most 20,000 (\(n \le 9\)), all of them are weighed and the bootstrap mean, variance, bias and quantiles are exact fractions. This is the bootstrap distribution itself, the thing a simulation only estimates, and it shows the method's own answer without simulation noise. For the mean it reproduces the plug-in formula \(\hat\sigma^2/n\) exactly.</p>
+
+<h2>Simulated, from a seed</h2>
+<pre><code>const data = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9];
+String(bootstrap(data, "median"));
+// "median 5; bootstrap se 1.076, bias -0.0145; percentile 0.950 interval [3, 7] (simulated: 2000 resamples, seed 1)"
+bootstrap(data, "median", { method: "basic" }).interval;   // [3, 7]: 2·5 − 7 and 2·5 − 3
+bootstrap(data, (xs) =&gt; Math.max(...xs.map(Number)), { resamples: 5000, seed: "max" });</code></pre>
+<p>The statistic is <code>"mean"</code>, <code>"median"</code>, <code>"variance"</code> or any function of the resampled list. The <strong>percentile</strong> interval takes the \(\alpha/2\) and \(1 - \alpha/2\) quantiles of the replicates \(\hat\theta^*\); the <strong>basic</strong> interval reflects them about the estimate, \([2\hat\theta - q_{1-\alpha/2},\, 2\hat\theta - q_{\alpha/2}]\). Both are approximations whose coverage depends on the statistic and the sample size; for the median of small samples the bootstrap distribution is lumpy, as the exact version shows. <a href="testing-the-tests.html">Testing the tests</a> shows how to check coverage with a seeded experiment.</p>
+<template data-runbox>
+// The exact bootstrap distribution of the median of five values
+const b = bootstrap([2, 3, 5, 7, 11], "median");
+for (const { value, probability } of b.distribution) PRINT(String(value).padStart(3), String(probability).padStart(8), "#".repeat(Math.round(probability.toNumber() * 60)));
+PRINT(String(b));
+// Exact against simulated, for the mean of eight values
+const x = [12, 15, 9, 20, 17, 11, 14, 18];
+const e = bootstrap(x);
+const s = bootstrap(x, "mean", { exactUpTo: 0, resamples: 5000, seed: 3 });
+PRINT("se exact", show(e.se, 6), "  simulated", s.se.toFixed(4));
+e.interval
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

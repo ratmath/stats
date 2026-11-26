@@ -130,6 +130,32 @@
 <tr><td>anova(groups)</td><td>One-way analysis of variance: <code>table</code>, <code>means</code>, <code>grandMean</code>, <code>etaSquared</code> and the F test.</td></tr>
 </table></div>
 
+<h2><a href="rank-tests.html">Rank tests</a>, <a href="kolmogorov-smirnov.html">Kolmogorov–Smirnov</a> and <a href="bootstrap.html">the bootstrap</a></h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Export</th><th>What it does</th></tr>
+<tr><td>ranks(data)</td><td>Midranks and tie group sizes.</td></tr>
+<tr><td>signTest(x, y?, { mu, alternative })</td><td>Exact, by the binomial law of the signs; zeros dropped.</td></tr>
+<tr><td>wilcoxonTest(x, y?, { mu, alternative, method, correct })</td><td>Signed-rank test; <code>method</code> <code>"auto"</code> (exact up to n = 60), <code>"exact"</code> or <code>"normal"</code>. Adds <code>estimate</code> (Hodges–Lehmann).</td></tr>
+<tr><td>mannWhitneyTest(x, y, { alternative, method, correct })</td><td>U, the rank sum, exact counting with ties, and the Hodges–Lehmann shift.</td></tr>
+<tr><td>kruskalWallisTest(groups)</td><td>H exact with the tie correction; p from chi-square, certified.</td></tr>
+<tr><td>spearmanTest(x, y, …), kendallTest(x, y, …)</td><td>Rank correlations; exact p by enumeration (Spearman, n ≤ 9) or inversion counts (Kendall, no ties).</td></tr>
+<tr><td>ksTest(x, dist | cdf | y, { alternative, exactUpTo, resamples, seed })</td><td>One sample against a Continuous or an exact cdf; two samples by counting lattice paths.</td></tr>
+<tr><td>kolmogorovCdf(n, d), kolmogorovTail(n, d), smirnovTail(n, d)</td><td>P(Dₙ &lt; d) exactly; the two-sided tail; the one-sided tail.</td></tr>
+<tr><td>bootstrap(data, statistic, { resamples, seed, level, method, exactUpTo })</td><td>A <code>Bootstrap</code>: <code>estimate</code>, <code>mean</code>, <code>bias</code>, <code>se</code>, <code>interval</code>; exact <code>distribution</code> for small samples, <code>replicates</code> otherwise.</td></tr>
+</table></div>
+
+<h2><a href="markov-chains.html">Markov chains</a> and <a href="bayesian-updating.html">Bayesian updating</a></h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Export</th><th>What it does</th></tr>
+<tr><td>markovChain(matrix | rows object, { states })</td><td>A <code>MarkovChain</code>; every row must add up to 1 exactly.</td></tr>
+<tr><td>MarkovChain</td><td><code>p(a, b)</code>, <code>power(n)</code>, <code>distribution(start, n)</code>, <code>classes()</code> (closed, recurrent, period), <code>isIrreducible()</code>, <code>isErgodic()</code>, <code>stationary()</code>, <code>absorption()</code> (probabilities, steps, fundamental matrix), <code>hitting(targets)</code>, <code>meanReturnTime(state)</code>, <code>simulate(start, steps, { seed })</code>.</td></tr>
+<tr><td>betaPrior(a, b)</td><td>Beta belief for a probability; <code>update({ successes, trials | failures })</code> or a list of 0/1; <code>predictive(m)</code> beta-binomial.</td></tr>
+<tr><td>gammaPrior(shape, rate, { likelihood })</td><td>Gamma belief for a rate, with Poisson counts or exponential times; <code>predictive()</code> negative binomial.</td></tr>
+<tr><td>normalPrior(mean, { variance | sd, dataVariance | dataSd })</td><td>Normal belief for a mean with known data variance.</td></tr>
+<tr><td>dirichletPrior(alpha)</td><td>Dirichlet belief for category probabilities; <code>marginal(category)</code>.</td></tr>
+<tr><td>Every belief</td><td><code>params</code>, <code>mean</code>, <code>variance</code>, <code>mode</code> (exact), <code>distribution</code>, <code>interval(level)</code> (certified), <code>cdf(x)</code>, <code>history</code>.</td></tr>
+</table></div>
+
 <h2><a href="sampling.html">Sampling</a>, <a href="models.html">models</a> and <a href="experiments.html">experiments</a></h2>
 <div class="tablewrap"><table class="ref">
 <tr><th>Export</th><th>What it does</th></tr>

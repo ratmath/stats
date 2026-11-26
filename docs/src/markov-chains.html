@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Markov chains · RatMath Stats</title>
+<meta name="description" content="Finite Markov chains in @ratmath/stats: n-step distributions, communicating classes and periods, stationary distributions, absorption probabilities and expected hitting times, all exact; seeded simulation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Chains and beliefs</div>
+<h1>Markov chains</h1>
+<p class="lede">A Markov chain moves between finitely many states, choosing each step with probabilities that depend only on where it is. Everything a course asks of one, from the long-run share of time in each state to the chance of ending in each absorbing state, comes from linear algebra over the rationals, so here it is exact.</p>
+<h2>A chain and its long run</h2>
+<pre><code>import { markovChain } from "@ratmath/stats";
+
+const weather = markovChain({ sun: { sun: "9/10", rain: "1/10" }, rain: { sun: "1/2", rain: "1/2" } });
+weather.distribution("rain", 3);        // { sun: 39/50, rain: 11/50 } three days after rain
+weather.stationary().distribution;      // { sun: 5/6, rain: 1/6 }
+weather.meanReturnTime("rain");         // 6 = 1/π(rain)
+weather.hitting("rain").expected.sun;   // 10 days from sun to the next rain
+weather.simulate("sun", 12, { seed: 3 }).join(" ");</code></pre>
+<p>With \(P_{ij}\) the probability of moving from \(i\) to \(j\), the distribution after \(n\) steps is \(\mu P^n\), and <code>power(n)</code> computes \(P^n\) by repeated squaring. A <strong>stationary distribution</strong> solves \(\pi = \pi P\) with \(\sum \pi_i = 1\): one linear system, solved exactly. For an irreducible chain it is unique, and by Kac's lemma the expected time to return to state \(i\) is \(1/\pi_i\).</p>
+<p>Expected hitting times solve another linear system: \(h_i = 0\) on the target, and \(h_i = 1 + \sum_j P_{ij} h_j\) elsewhere. From sun, \(h = 1 + \tfrac{9}{10}h\), so \(h = 10\).</p>
+
+<h2>Classes and periods</h2>
+<pre><code>const cycle = markovChain([[0, 1, 0], [0, 0, 1], [1, 0, 0]]);
+cycle.classes();     // [{ states: [0, 1, 2], closed: true, recurrent: true, period: 3 }]
+cycle.isErgodic();   // false: Pⁿ cycles and never settles, though π = (1/3, 1/3, 1/3) exists</code></pre>
+<p>States communicate when each can reach the other; the classes are found from reachability. In a finite chain a class is recurrent exactly when no probability leaves it. The <strong>period</strong> of a class is the greatest common divisor of the lengths of its cycles, found from a breadth-first search. An irreducible chain with period 1 is <em>ergodic</em>: \(P^n\) converges to a matrix whose rows all equal \(\pi\).</p>
+
+<h2>Absorption</h2>
+<pre><code>// gambler's ruin with fair bets, from 0 to 4 dollars
+const ruin = markovChain([[1, 0, 0, 0, 0], ["1/2", 0, "1/2", 0, 0], [0, "1/2", 0, "1/2", 0],
+                          [0, 0, "1/2", 0, "1/2"], [0, 0, 0, 0, 1]]);
+const a = ruin.absorption();
+a.probabilities[1];   // { "0": 3/4, "4": 1/4 }
+a.steps;              // { 1: 3, 2: 4, 3: 3 }: k(N − k) bets on average</code></pre>
+<p>Order the states with the transient ones first, so that \(P = \begin{pmatrix} Q &amp; R \\ 0 &amp; I \end{pmatrix}\). The <strong>fundamental matrix</strong> \(N = (I - Q)^{-1} = I + Q + Q^2 + \cdots\) counts the expected visits to each transient state. Then \(NR\) gives the absorption probabilities and \(N\mathbf 1\) the expected number of steps before absorption. Each is exact; <code>fundamental</code> returns \(N\) itself.</p>
+<template data-runbox>
+// Long-run behaviour: Pⁿ approaches the stationary rows
+const w = markovChain({ sun: { sun: "9/10", rain: "1/10" }, rain: { sun: "1/2", rain: "1/2" } });
+for (const n of [1, 2, 5, 10, 20]) PRINT(`P^${n} row from rain:`, w.power(n)[1].map((p) =&gt; show(p, 6)).join("  "));
+// Snakes and ladders on 10 squares: expected number of rolls of a three-sided die to finish
+const N = 10, jumps = { 3: 7, 8: 2 };
+const rows = Array.from({ length: N + 1 }, (_, i) =&gt; {
+  const row = Array(N + 1).fill(0);
+  if (i === N) { row[N] = 1; return row; }
+  for (const d of [1, 2, 3]) { let j = Math.min(N, i + d); j = jumps[j] ?? j; row[j] += 1; }
+  return row.map((c) =&gt; `${c}/3`);
+});
+const game = markovChain(rows);
+PRINT("expected rolls from the start:", String(game.absorption().steps[0]));
+PRINT("simulated game:", game.simulate(0, 8, { seed: 1 }).join(" → "));
+game.classes().map((c) =&gt; `${c.states.join(",")}: ${c.recurrent ? "recurrent" : "transient"}`)
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>
