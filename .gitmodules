@@ -4,3 +4,9 @@
 [submodule "vendor/discrete"]
 	path = vendor/discrete
 	url = https://github.com/ratmath/discrete.git
+[submodule "vendor/algebraic"]
+	path = vendor/algebraic
+	url = https://github.com/ratmath/algebraic.git
+[submodule "vendor/logic"]
+	path = vendor/logic
+	url = https://github.com/ratmath/logic.git
