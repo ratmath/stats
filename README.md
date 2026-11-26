@@ -3,7 +3,7 @@
 Probability and statistics for [RatMath](https://ratmath.com/), part of the
 [RatMath Shelf](https://ratmath.com/shelf/).
 
-**Status: phases 1 to 3 of 8 are built.** Docs: <https://ratmath.com/stats/>.
+**Status: phases 1 to 5 of 8 are built.** Docs: <https://ratmath.com/stats/>.
 
 Probability and statistics in one library, with three kinds of answer that are
 never mixed up:
@@ -15,6 +15,12 @@ never mixed up:
   "too close to call".
 - **simulated**: seeded random experiments that carry their seed and their
   own sampling error.
+
+Standard inference sits on top: z, t, chi-square and F tests, proportions,
+fitted distributions, linear regression and analysis of variance. Statistics
+such as t², X² and F stay exact fractions, p-values are certified, and seeded
+experiments in the test suite check that intervals cover and tests keep their
+stated size.
 
 Data can be generated from a model you choose, disturbed with noise,
 contamination, error in x, rounding, censoring and missing values, and handed
@@ -40,8 +46,8 @@ String(estimatorStudy({ model: line, n: 50, truth: 0.5, runs: 2000, seed: 1,
 | 1 | Finite probability, discrete distributions, descriptive statistics, exact tests | built |
 | 2 | Continuous distributions, certified | built |
 | 3 | Seeded generation, models with noise and contamination, experiments | built |
-| 4 | Estimation, confidence intervals, the standard tests | planned |
-| 5 | Regression and analysis of variance | planned |
+| 4 | Estimation, confidence intervals, the standard tests | built |
+| 5 | Regression and analysis of variance | built |
 | 6 | Rank tests, permutation tests, the bootstrap | planned |
 | 7 | Markov chains; conjugate Bayesian updating | planned |
 | 8 | Graphics hooks | planned |

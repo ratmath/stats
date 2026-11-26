@@ -1,8 +1,8 @@
 // Shared page furniture for the stats docs: the contents column, the theme
 // switch and the code boxes. Add each topic page to PAGES as it is written.
 
-import * as A from "./stats.js?v=f9485bdd3e";
-import { mountRunboxes } from "./runbox.js?v=f9485bdd3e";
+import * as A from "./stats.js?v=99d7635b4b";
+import { mountRunboxes } from "./runbox.js?v=99d7635b4b";
 
 export { A };
 
@@ -22,6 +22,15 @@ export const PAGES = [
   { href: "sampling.html", title: "Seeded sampling", blurb: "A seeded generator, named streams, exact rational draws" },
   { href: "models.html", title: "Models with noise", blurb: "A known truth disturbed by noise, contamination, censoring and more" },
   { href: "experiments.html", title: "Experiments", blurb: "Coverage, size, power and bias, each with its sampling error" },
+  { group: "Inference" },
+  { href: "means.html", title: "Tests for means", blurb: "z and t tests, paired, Welch and pooled, with exact t² and certified p-values" },
+  { href: "variances-proportions.html", title: "Variances and proportions", blurb: "Chi-square and F for spread; z tests and Wilson intervals for proportions" },
+  { href: "chi-square.html", title: "Chi-square tests", blurb: "Goodness of fit and independence, with Yates' correction and Fisher's test beside them" },
+  { href: "estimation.html", title: "Fitting distributions", blurb: "Maximum likelihood and the method of moments for ten families" },
+  { href: "testing-the-tests.html", title: "Testing the tests", blurb: "Seeded experiments check that intervals cover and tests keep their size" },
+  { group: "Regression" },
+  { href: "regression.html", title: "Linear regression", blurb: "Exact least squares, coefficient tests, prediction intervals, leverage, nested models" },
+  { href: "anova.html", title: "Analysis of variance", blurb: "One-way ANOVA with exact sums of squares, as a regression, and two factors" },
 ];
 
 export const h = (tag, attrs = {}, ...kids) => {

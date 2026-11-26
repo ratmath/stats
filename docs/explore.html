@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="https://ratmath.com/assets/katex/0.19.1/katex.min.css">
-<link rel="stylesheet" href="assets/style.css?v=f9485bdd3e">
-<script type="module" src="assets/site.js?v=f9485bdd3e"></script>
+<link rel="stylesheet" href="assets/style.css?v=99d7635b4b">
+<script type="module" src="assets/site.js?v=99d7635b4b"></script>
 </head>
 <body>
 <div class="shell">
@@ -44,6 +44,14 @@
 <div id="ex-sout"></div>
 </div>
 <p>Numbers separated by commas or spaces. Fractions such as <code>7/2</code> are welcome.</p>
+
+<h2>Two columns: compare, or fit a line</h2>
+<div class="demo">
+<label>x<textarea id="ex-x2" class="text" rows="2" aria-label="x values" spellcheck="false">1, 2, 2, 3, 4, 5, 5, 6, 7, 8</textarea></label>
+<label>y<textarea id="ex-y2" class="text" rows="2" aria-label="y values" spellcheck="false">52, 55, 61, 60, 68, 70, 74, 75, 83, 86</textarea></label>
+<div id="ex-rout"></div>
+</div>
+<p>As two samples, the columns get Welch's t test and the F test for equal variances (and the paired t test, when they have the same length). As pairs, they get the least squares line with exact coefficients, the slope's 95% interval and the correlation test. See <a href="means.html">tests for means</a> and <a href="regression.html">linear regression</a>.</p>
 
 <h2>An experiment</h2>
 <div class="demo">
@@ -80,7 +88,7 @@ for (const [name, f] of [["mean", fast.mean], ["median", fast.median]]) {
 </main>
 </div>
 <script type="module">
-import { A as S, h } from "./assets/site.js?v=f9485bdd3e";
+import { A as S, h } from "./assets/site.js?v=99d7635b4b";
 const $ = (id) => document.getElementById(id);
 const row = (label, f) => {
   let text;
@@ -157,6 +165,29 @@ function dataPanel() {
   }
 }
 
+function twoPanel() {
+  const out = $("ex-rout");
+  try {
+    const x = $("ex-x2").value.split(/[\s,;]+/).filter(Boolean);
+    const y = $("ex-y2").value.split(/[\s,;]+/).filter(Boolean);
+    const rows = [
+      row("Welch t test", () => `${S.tTest(y, x)}`),
+      row("F test, equal variances", () => `${S.fTest(y, x)}`),
+    ];
+    if (x.length === y.length) {
+      rows.push(row("paired t test", () => `${S.tTest(y, x, { paired: true })}`));
+      const m = S.linearModel(x, y);
+      rows.push(row("least squares", () => String(m)));
+      rows.push(row("R²", () => `${m.rSquared}  =  ${S.show(m.rSquared, 6)}`));
+      rows.push(row("slope, 95%", () => { const c = m.interval("x"); return `${S.show(c.low, 6)} to ${S.show(c.high, 6)}`; }));
+      rows.push(row("correlation", () => `${S.correlationTest(x, y)}`));
+    }
+    out.replaceChildren(h("dl", { class: "kv out" }, ...rows));
+  } catch (e) {
+    fail(out, e);
+  }
+}
+
 let timer = null;
 function experimentPanel() {
   const out = $("ex-eout");
@@ -201,9 +232,11 @@ function experimentPanel() {
 
 for (const id of ["ex-params", "ex-x", "ex-p", "ex-digits"]) $(id).addEventListener("input", distPanel);
 $("ex-data").addEventListener("input", dataPanel);
+for (const id of ["ex-x2", "ex-y2"]) $(id).addEventListener("input", twoPanel);
 for (const id of ["ex-n", "ex-rate", "ex-csd", "ex-runs", "ex-seed"]) $(id).addEventListener("input", experimentPanel);
 distPanel();
 dataPanel();
+twoPanel();
 experimentPanel();
 </script>
 </body>

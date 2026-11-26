@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Analysis of variance · RatMath Stats</title>
+<meta name="description" content="One-way ANOVA with exact sums of squares in @ratmath/stats, its link to regression on indicator variables, and two-way comparisons with nested models.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Regression</div>
+<h1>Analysis of variance</h1>
+<p class="lede">Do several groups share one mean? Analysis of variance splits the total variation into the part between groups and the part within them, and compares the two. Every sum of squares here is an exact fraction.</p>
+<h2>One way</h2>
+<pre><code>import { anova, show } from "@ratmath/stats";
+
+const a = anova({ A: [23, 25, 21, 24], B: [28, 30, 27, 29], C: [22, 20, 24, 23] });
+String(a);       // "one-way analysis of variance: p = 0.000711 (certified, greater)"
+a.statistic;     // 541/30
+a.table;         // between groups: df 2, ss 541/6;  within groups: df 9, ss 45/2;  total: df 11, ss 338/3
+a.means;         // { A: 93/4, B: 57/2, C: 89/4 }
+a.etaSquared;    // 541/676: the share of the variation explained by the groups</code></pre>
+<p>With \(k\) groups, group sizes \(n_j\), group means \(\bar y_j\) and grand mean \(\bar y\), the total sum of squares splits exactly:</p>
+\[ \underbrace{\sum_{j}\sum_i (y_{ij} - \bar y)^2}_{SST} = \underbrace{\sum_j n_j(\bar y_j - \bar y)^2}_{SSB} + \underbrace{\sum_j\sum_i (y_{ij} - \bar y_j)^2}_{SSW}. \]
+<p>If all groups have the same mean (and normal errors with a common variance), \(F = \frac{SSB/(k-1)}{SSW/(N-k)}\) has the \(F(k-1, N-k)\) distribution. Large values mean the group means are further apart than the noise within groups explains. \(\eta^2 = SSB/SST\) is the effect size.</p>
+
+<h2>It is a regression</h2>
+<pre><code>const g = ["A", "A", "A", "A", "B", "B", "B", "B", "C", "C", "C", "C"];
+const y = [23, 25, 21, 24, 28, 30, 27, 29, 22, 20, 24, 23];
+dummies(g);                          // { B: [0,0,0,0,1,1,1,1,0,0,0,0], C: [...] }: A is the reference
+String(linearModel(dummies(g), y));  // "y = 93/4 + 21/4·B − 1·C  (n = 12, R² = 541/676)"
+linearModel(dummies(g), y).fTest();  // p = 0.000711, the same test</code></pre>
+<p>Code each group but one as a 0/1 <strong>indicator</strong> column and regress. The intercept is the reference group's mean, each coefficient the difference between a group's mean and the reference's, \(R^2\) equals \(\eta^2\), and the regression's F test is the ANOVA F test. The test suite checks these identities exactly, along with the two-group case: the pooled t statistic squared is the ANOVA F.</p>
+
+<h2>Two factors</h2>
+<pre><code>const fert  = ["lo","lo","hi","hi","lo","lo","hi","hi","lo","lo","hi","hi"];
+const water = ["dry","wet","dry","wet","dry","wet","dry","wet","dry","wet","dry","wet"];
+const yld   = [10, 14, 13, 19, 11, 15, 12, 20, 9, 13, 14, 18];
+const both  = linearModel({ ...dummies(fert, { name: "fert" }), ...dummies(water, { name: "water" }) }, yld);
+String(both);   // "y = 19/2 + 4·fert=hi + 5·water=wet  (n = 12, R² = 123/134)"
+const onlyWater = linearModel(dummies(water, { name: "water" }), yld);
+compareModels(onlyWater, both);   // F = 39.27, p = 0.000147: fertiliser matters, given water</code></pre>
+<p>With more than one factor the sums of squares no longer split in a single way unless the design is balanced, so the question has to be asked precisely: does a factor improve the model that already contains the others? That is the nested-model F test from the <a href="regression.html">regression page</a>. Adding a product of indicator columns tests an interaction the same way.</p>
+<template data-runbox>
+const groups = { A: [23, 25, 21, 24], B: [28, 30, 27, 29], C: [22, 20, 24, 23] };
+const a = anova(groups);
+PRINT(String(a));
+for (const r of a.table) PRINT(r.source.padEnd(16), "df", r.df, " ss", String(r.ss));
+// SSB + SSW = SST, exactly
+PRINT("check:", a.table[0].ss.add(a.table[1].ss).equals(a.table[2].ss));
+// the same F from the regression on indicators
+const labels = Object.entries(groups).flatMap(([k, v]) =&gt; v.map(() =&gt; k));
+const fit = linearModel(dummies(labels), Object.values(groups).flat());
+PRINT("regression F:", String(fit.fTest().statistic), " ANOVA F:", String(a.statistic));
+// does ANOVA hold its size when all three groups come from one distribution?
+rejectionRate({
+  draw: (rng) =&gt; [0, 1, 2].map(() =&gt; Array.from({ length: 5 }, () =&gt; new Rational(BigInt(Math.round(normal(0, 1).sample(rng) * 100)), 100n))),
+  test: (gs) =&gt; anova(gs, { bits: 32 }), runs: 100, seed: 4,
+}).toString()
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fitting distributions · RatMath Stats</title>
+<meta name="description" content="Maximum likelihood and the method of moments in @ratmath/stats: exact estimates for the normal, exponential, Poisson, binomial, geometric and uniform families, and certified ones for gamma and lognormal.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Inference</div>
+<h1>Fitting distributions</h1>
+<p class="lede">Given data and a family of distributions, which member fits? Maximum likelihood picks the parameters that make the data most probable; the method of moments matches the mean and variance. Where the answer has a closed form it is an exact fraction.</p>
+<h2>Closed forms</h2>
+<pre><code>import { fit, show } from "@ratmath/stats";
+
+const d = [3, 1, 4, 1, 5, 9, 2, 6];
+fit(d, "normal").params;        // { mu: 31/8, variance: 423/64, sigma: 2.570870… }
+fit(d, "exponential").params;   // { rate: 8/31 }
+fit(d, "poisson").params;       // { lambda: 31/8 }
+fit(d, "uniform").params;       // { a: 1, b: 9 }: the smallest and largest values
+fit(d, "uniform", { method: "moments" }).params;   // { a: −0.577878…, b: 8.327878… }
+fit([2, 3, 1], "binomial", { trials: 4 }).params;  // { trials: 4, p: 1/2 }</code></pre>
+<p>For most textbook families the likelihood equations solve in closed form: the normal mean is \(\bar x\) and its variance \(\frac1n\sum(x_i - \bar x)^2\) (dividing by \(n\), not \(n - 1\)), the exponential rate is \(1/\bar x\), the Poisson mean is \(\bar x\). With rational data these are exact. The method of moments sets the population mean and variance equal to the sample's; for the uniform distribution that gives \(\bar x \pm \sqrt{3v}\), which need not even contain the data, while maximum likelihood gives the range of the data.</p>
+
+<h2>Gamma: an equation to solve</h2>
+<p>The gamma family's moment estimates are exact, \(k = \bar x^2/v\) and rate \(\bar x/v\). Its maximum-likelihood shape solves</p>
+\[ \log k - \psi(k) = \log \bar x - \frac1n \sum \log x_i, \]
+<p>with \(\psi\) the digamma function. The left side decreases from \(\infty\) to 0, so there is exactly one root, and it is enclosed by bisection on certified values of \(\psi\) and \(\log\) (both from @ratmath/analytic). The answer is an interval of width about \(2^{-64}\).</p>
+<pre><code>fit(d, "gamma").params;                       // { shape: 2.093251…, rate: 0.540194… }, certified
+fit(d, "gamma", { method: "moments" }).params; // { shape: 961/423, rate: 248/423 }, exact
+fit([1, 2, 4], "lognormal").params.mu;        // log 2, certified: the mean of the logs</code></pre>
+<p>When the parameters are enclosures the result has no <code>distribution</code>, since the distributions take exact parameters; when they are exact, <code>distribution</code> is the fitted member, ready for its density, quantiles or samples.</p>
+<template data-runbox>
+// maximum likelihood against moments for gamma data, by experiment
+const truth = gamma(2, 1);
+const rng0 = rng("fitting");
+const data = Array.from({ length: 40 }, () =&gt; new Rational(Math.round(truth.sample(rng0) * 1000), 1000));
+const mle = fit(data, "gamma").params;
+const mom = fit(data, "gamma", { method: "moments" }).params;
+PRINT("maximum likelihood: shape", show(mle.shape, 4), " rate", show(mle.rate, 4));
+PRINT("moments:            shape", show(mom.shape, 4), " rate", show(mom.rate, 4));
+// an exact fit is a distribution you can use straight away
+const f = fit([1, 3], "normal").distribution;
+PRINT(String(f), show(f.cdf(3), 6));
+estimatorStudy({ draw: (r) =&gt; Array.from({ length: 40 }, () =&gt; truth.sample(r)), estimator: (x) =&gt; { const m = x.reduce((s, v) =&gt; s + v, 0) / x.length; const v = x.reduce((s, u) =&gt; s + (u - m) ** 2, 0) / x.length; return m * m / v; }, truth: 2, runs: 300, seed: 1 }).toString()
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

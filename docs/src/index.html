@@ -50,6 +50,9 @@ String(estimatorStudy({ model: line, n: 50, truth: 0.5, runs: 2000, seed: 1,
 <h2>Data from a truth you chose</h2>
 <p>The part of this library that most packages lack: say what the truth is, say how observations depart from it (noise, unequal spread, contamination, error in \(x\), rounding, censoring, missing values), draw data, and see whether a test or a regression recovers what you put in. Changing one departure leaves the random numbers of the others alone, so two versions of a model can be compared on the same data. See <a href="models.html">Models with noise</a>.</p>
 
+<h2>Inference and regression</h2>
+<p>The standard tests and intervals (z and t tests, chi-square and F tests, proportions, fitted distributions) keep their statistic exact where it can be: \(t^2\), \(X^2\) and \(F\) are fractions, and the p-value is a certified enclosure computed at that exact argument. Linear regression and analysis of variance solve the normal equations over the rationals, so coefficients, residuals, leverages and \(R^2\) are exact. The package's own tests then use seeded models to check that the intervals cover and the tests have their stated size; see <a href="testing-the-tests.html">Testing the tests</a>.</p>
+
 <h2>What is planned</h2>
 <p>From the <a href="https://github.com/ratmath/ratmath/blob/main/docs/design/library-roadmap.md#6-a-probability-and-statistics-package-ratmathstats">library roadmap</a>. Sizes are rough estimates in lines of source.</p>
 <div class="tablewrap"><table class="plan">
@@ -57,8 +60,8 @@ String(estimatorStudy({ model: line, n: 50, truth: 0.5, runs: 2000, seed: 1,
 <tr><td>1</td><td>Finite probability, discrete distributions, descriptive statistics, exact tests</td><td>built</td></tr>
 <tr><td>2</td><td>Continuous distributions, certified</td><td>built</td></tr>
 <tr><td>3</td><td>Seeded generation, models with noise and contamination, experiments</td><td>built</td></tr>
-<tr><td>4</td><td>Estimation, confidence intervals, the standard tests</td><td>1,000</td></tr>
-<tr><td>5</td><td>Regression and analysis of variance</td><td>1,100</td></tr>
+<tr><td>4</td><td>Estimation, confidence intervals, the standard tests</td><td>built</td></tr>
+<tr><td>5</td><td>Regression and analysis of variance</td><td>built</td></tr>
 <tr><td>6</td><td>Rank tests, permutation tests, the bootstrap</td><td>700</td></tr>
 <tr><td>7</td><td>Markov chains; conjugate Bayesian updating</td><td>700</td></tr>
 <tr><td>8</td><td>Graphics hooks</td><td>800 in graphics</td></tr>

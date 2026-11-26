@@ -16,6 +16,10 @@ export {
 export { Continuous, normal, lognormal, gamma, chiSquare, exponential, weibull, beta, studentT, fDist, uniform, cauchy } from "./src/continuous.js";
 export { TestResult, binomialTest, fisherTest, permutationTest, proportionInterval } from "./src/tests.js";
 export { Model, Dataset, model } from "./src/model.js";
+export {
+  zTest, tTest, meanInterval, varianceInterval, varianceTest, fTest, proportionTest, chiSquareTest, correlationTest, fit,
+} from "./src/inference.js";
+export { LinearModel, linearModel, polyFit, dummies, compareModels, anova } from "./src/regression.js";
 export { SimulatedRate, SimulatedEstimates, howOften, coverage, rejectionRate, powerCurve, estimatorStudy } from "./src/experiment.js";
 export { rng, Random } from "@ratmath/discrete";
 export { plan } from "./src/plan.js";

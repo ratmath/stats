@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chi-square tests · RatMath Stats</title>
+<meta name="description" content="Pearson&#x27;s chi-square tests in @ratmath/stats: goodness of fit to probabilities or expected counts, independence in contingency tables, Yates&#x27;s correction, with exact statistics and certified p-values.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Inference</div>
+<h1>Chi-square tests</h1>
+<p class="lede">Do counts fit a model? Are two classifications independent? Pearson's statistic adds up (observed − expected)²/expected over the cells. It is an exact fraction; its p-value comes from the chi-square distribution, certified.</p>
+<h2>Goodness of fit</h2>
+<pre><code>import { chiSquareTest } from "@ratmath/stats";
+
+const die = chiSquareTest([22, 17, 21, 18, 12, 30]);   // 120 rolls: is the die fair?
+die.statistic;        // 91/10
+die.df;               // 5
+die.contributions;    // [1/5, 9/20, 1/20, 1/5, 16/5, 5]: the six cells' shares
+String(die);          // "chi-square goodness-of-fit test: p = 0.105141 (certified, greater)"
+
+// Mendel's peas: round yellow, round green, wrinkled yellow, wrinkled green, against 9:3:3:1
+chiSquareTest([315, 108, 101, 32], { p: ["9/16", "3/16", "3/16", "1/16"] });   // X² = 196/417, p = 0.925426</code></pre>
+<p>With observed counts \(O_i\) and expected counts \(E_i = N p_i\),</p>
+\[ X^2 = \sum_i \frac{(O_i - E_i)^2}{E_i} \]
+<p>is approximately \(\chi^2\) with \(k - 1\) degrees of freedom when the model is right, less one for each parameter estimated from the data (option <code>estimated</code>). Large values mean a poor fit, so the p-value is the upper tail. The approximation needs the expected counts to be not too small; <code>smallExpected</code> flags any below 5. Mendel's fit is so good that Fisher, looking at all of Mendel's experiments together, suspected the data had been tidied.</p>
+
+<h2>Independence</h2>
+<p>For an \(r \times c\) table, independence of the two classifications predicts \(E_{ij} = R_i C_j / N\) from the row and column totals, and \(X^2\) has \((r-1)(c-1)\) degrees of freedom.</p>
+<pre><code>const t = chiSquareTest([[20, 30, 25], [30, 15, 30]]);
+t.statistic;    // 82/11
+t.expected;     // [[25, 45/2, 55/2], [25, 45/2, 55/2]]
+t.df;           // 2
+String(t);      // "… p = 0.024058 …"
+
+const small = [[12, 5], [7, 14]];
+chiSquareTest(small);                     // p = 0.022384
+chiSquareTest(small, { correct: true });  // Yates: p = 0.050285
+fisherTest(small);                        // exact: p = 0.048853</code></pre>
+<p><strong>Yates's correction</strong> shrinks each \(|O - E|\) by \(\tfrac12\) in a 2×2 table to allow for the counts being whole numbers. It overcorrects, as the example shows: the exact Fisher test lies between the two.</p>
+<template data-runbox>
+// a loaded die: how many rolls before the test notices?
+const loaded = ["1/6", "1/6", "1/6", "1/6", "1/8", "5/24"];   // five turns up less, six more
+for (const n of [60, 240, 960]) {
+  const expected = loaded.map((p) =&gt; new Rational(p).multiply(new Rational(n)));
+  // the counts we would see on average, rounded
+  const counts = expected.map((e) =&gt; Number(e.round()));
+  const t = chiSquareTest(counts);
+  PRINT(n, "rolls:", counts.join(" "), " X² =", show(t.statistic, 3), " p =", show(t.pValue, 4));
+}
+chiSquareTest([[20, 30, 25], [30, 15, 30]]).contributions
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

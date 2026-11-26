@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Testing the tests · RatMath Stats</title>
+<meta property="og:title" content="Testing the tests · RatMath Stats">
+<meta property="og:description" content="Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests and regression.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ratmath.com/stats/testing-the-tests.html">
+<meta name="description" content="Seeded experiments in @ratmath/stats that check confidence intervals cover at their level and tests reject at their stated size, and show where the assumptions break.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css?v=99d7635b4b">
+<script type="module" src="assets/site.js?v=99d7635b4b"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Inference</div>
+<h1>Testing the tests</h1>
+<p class="lede">A 95% interval should catch the truth 95% of the time; a test at 5% should reject a true null 5% of the time. Both are claims about repeated sampling, so they can be checked by drawing from a seeded model whose truth is known. The package's own test suite does exactly that.</p>
+<h2>Coverage</h2>
+<pre><code>import { coverage, meanInterval, normal, Rational } from "@ratmath/stats";
+
+const sample = (dist, n, rng) =&gt;
+  Array.from({ length: n }, () =&gt; new Rational(BigInt(Math.round(dist.sample(rng) * 100)), 100n));
+
+const c = coverage({
+  draw: (rng) =&gt; sample(normal(10, 2), 12, rng),      // twelve readings, true mean 10
+  interval: (d) =&gt; meanInterval(d, { bits: 32 }),
+  truth: 10, runs: 300, seed: 3,
+});
+String(c);              // the fraction covered, with its own 95% interval from the 300 runs
+c.compare("0.95");      // "inside": 95% is consistent with what was seen</code></pre>
+<p>Each run draws a fresh sample from the seeded generator, builds the interval, and records whether it contains the true value. The proportion covered is itself an estimate, so <code>coverage</code> reports it with a binomial interval, and <code>compare</code> says whether the nominal level is <code>"inside"</code> that interval, or the procedure is clearly <code>"above"</code> or <code>"below"</code> it. With 300 runs the interval is about ±2.5 percentage points wide, so this catches gross failures, not subtle ones. Because the generator is seeded, the same call gives the same answer every time.</p>
+
+<h2>Size</h2>
+<pre><code>const unequal = (rng) =&gt; [sample(normal(0, 1), 25, rng), sample(normal(0, 4), 5, rng)];
+rejectionRate({ draw: unequal, test: ([a, b]) =&gt; tTest(a, b, { bits: 32 }), runs: 300, seed: 6 });
+                // Welch: about 5%, as stated
+rejectionRate({ draw: unequal, test: ([a, b]) =&gt; tTest(a, b, { equalVariance: true, bits: 32 }), runs: 300, seed: 6 });
+                // pooled: well above 10%</code></pre>
+<p>The <strong>size</strong> of a test is how often it rejects when the null hypothesis is true. Here both samples have mean 0, so every rejection is a false alarm. The two samples have different spreads, and the small one has the large spread. Welch's test still rejects about 5% of the time. The pooled test assumes equal variances and rejects far more often. The test suite checks this: the lower end of the pooled test's interval stays above 10%.</p>
+
+<h2>What the suite checks</h2>
+<ul>
+<li>The t interval for a mean covers at 95% (normal data, n = 12).</li>
+<li>The one-sample t test has size 5%; Welch's two-sample test keeps it with unequal variances; the pooled test does not.</li>
+<li>The chi-square goodness-of-fit test of a fair die, with 60 rolls, has size 5%.</li>
+<li>The regression slope interval covers the true slope of a seeded line.</li>
+</ul>
+<p>Alongside these, exact identities tie the procedures to each other: the pooled t² equals the ANOVA F, the 2×2 chi-square equals the two-proportion z², the correlation t² equals the slope t², and Cook's distance matches leaving each point out. An identity catches a wrong formula; an experiment catches a right formula used where its assumptions fail.</p>
+
+<h2>Breaking the assumptions on purpose</h2>
+<p>The <a href="models.html">models</a> page builds data from a known truth plus noise, contamination or censoring. Feeding those models to the tests shows how robust each one is: the t interval tolerates mild skew at moderate n, the chi-square interval for a variance does not tolerate heavy tails, and the pooled t test fails when spreads and sample sizes are mismatched. The <a href="experiments.html">experiments</a> page has the floating-point versions, which are fast enough for thousands of runs.</p>
+<section class="runbox" aria-label="Runnable code">
+  <div class="runbox-head"><strong>Try it</strong><span>Edit the code and run it with <code>@ratmath/stats</code> and Core's <code>Rational</code> in scope. The last line's value is shown; <code>PRINT(…)</code> adds lines, <code>TEX(…)</code> typesets math.</span></div>
+  <textarea spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Code">const sample = (dist, n, rng) =&gt;
+  Array.from({ length: n }, () =&gt; new Rational(BigInt(Math.round(dist.sample(rng) * 100)), 100n));
+
+// coverage of the 95% t interval, normal data
+const c = coverage({ draw: (rng) =&gt; sample(normal(10, 2), 12, rng), interval: (d) =&gt; meanInterval(d, { bits: 32 }), truth: 10, runs: 150, seed: 3 });
+PRINT("t interval:", String(c), "→ 95% is", c.compare("0.95"));
+
+// the variance interval with heavy-tailed noise (t with 3 df, variance 3)
+const v = coverage({ draw: (rng) =&gt; sample(studentT(3), 20, rng), interval: (d) =&gt; varianceInterval(d, { bits: 32 }), truth: 3, runs: 150, seed: 3 });
+PRINT("variance interval, heavy tails:", String(v), "→ 95% is", v.compare("0.95"));
+
+// Welch against pooled with unequal spreads
+const unequal = (rng) =&gt; [sample(normal(0, 1), 25, rng), sample(normal(0, 4), 5, rng)];
+const w = rejectionRate({ draw: unequal, test: ([a, b]) =&gt; tTest(a, b, { bits: 32 }), runs: 150, seed: 6 });
+const p = rejectionRate({ draw: unequal, test: ([a, b]) =&gt; tTest(a, b, { equalVariance: true, bits: 32 }), runs: 150, seed: 6 });
+PRINT("Welch size:", String(w));
+PRINT("pooled size:", String(p));
+p.compare("0.05")</textarea>
+  <div class="runbox-bar"><button type="button" data-run>Run</button><button type="button" class="ghost" data-reset>Reset</button><span class="runbox-meta">Ctrl/⌘ + Enter runs</span></div>
+  <div class="runbox-out" aria-live="polite"></div>
+</section>
+<footer class="sitelinks"><a href="https://github.com/ratmath/stats">GitHub</a> · <a href="https://ratmath.com/">ratmath.com</a> · <a href="https://ratmath.com/shelf/">shelf</a> · <a href="https://ratmath.com/core/">core</a></footer>
+</article>
+</main>
+</div>
+</body>
+</html>
