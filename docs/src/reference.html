@@ -103,6 +103,33 @@
 <tr><td>Continuous</td><td><code>pdf(x)</code>, <code>cdf(x)</code>, <code>sf(x)</code>, <code>prob(a, b)</code>, <code>quantile(p)</code>, <code>median()</code>, each with <code>{ bits }</code>; <code>mean</code>, <code>variance</code>, <code>sd()</code> (<code>null</code> where undefined); <code>low</code>, <code>high</code> (the support; <code>null</code> for infinite); <code>fast.pdf</code>, <code>fast.cdf</code>, <code>fast.quantile</code>; <code>sample(rng)</code>, <code>samples(n, rng)</code>, <code>sampleExact(rng, { bits })</code>, <code>samplesExact(n, rng)</code>.</td></tr>
 </table></div>
 
+<h2><a href="means.html">Tests</a> and <a href="estimation.html">estimation</a></h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Export</th><th>What it does</th></tr>
+<tr><td>zTest(data, { sigma, mu, alternative, bits })</td><td>z test for a mean with known \(\sigma\).</td></tr>
+<tr><td>tTest(x, [y], { mu, paired, equalVariance, alternative, bits })</td><td>One-sample, paired, Welch (default) or pooled t test.</td></tr>
+<tr><td>meanInterval(data, { level, sigma, alternative, bits })</td><td>t (or z) interval for a mean.</td></tr>
+<tr><td>varianceInterval(data, { level, bits })</td><td>Chi-square interval for \(\sigma^2\); <code>.sd</code> holds the interval for \(\sigma\).</td></tr>
+<tr><td>varianceTest(data, v0), fTest(x, y, { ratio })</td><td>Chi-square test of one variance; F test of a ratio of two.</td></tr>
+<tr><td>proportionTest(k, n, p0, { correct }), proportionTest([k1, k2], [n1, n2])</td><td>z test for one or two proportions, with Wilson or Wald intervals.</td></tr>
+<tr><td>chiSquareTest(observed | table, { p, expected, estimated, correct })</td><td>Goodness of fit, or independence in a contingency table (Yates' correction on 2×2 when asked).</td></tr>
+<tr><td>correlationTest(x, y)</td><td>t test of zero correlation; Fisher's z interval.</td></tr>
+<tr><td>fit(data, family, { method, trials })</td><td>Maximum likelihood (default) or moments for <code>normal</code>, <code>exponential</code>, <code>poisson</code>, <code>bernoulli</code>, <code>binomial</code>, <code>geometric</code>, <code>uniform</code>, <code>gamma</code>, <code>beta</code> (moments), <code>lognormal</code> (likelihood). Returns <code>params</code>, <code>method</code>, <code>kind</code> and <code>distribution</code>.</td></tr>
+<tr><td>TestResult</td><td><code>statistic</code>, <code>statisticSquared</code> (exact where possible), <code>df</code>, <code>pValue</code> (certified), <code>alternative</code>, <code>estimate</code>, <code>null</code>, <code>standardError</code>, <code>interval({ level })</code>, <code>reject(alpha)</code>, <code>decision(alpha)</code>.</td></tr>
+<tr><td>Interval</td><td><code>{ low, high, level, estimate, method }</code>; an open end is <code>null</code>. Ends are rounded outward from enclosures.</td></tr>
+</table></div>
+
+<h2><a href="regression.html">Regression</a> and <a href="anova.html">analysis of variance</a></h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Export</th><th>What it does</th></tr>
+<tr><td>linearModel(x, y, { intercept = true, names })</td><td>Least squares with exact coefficients. <code>x</code> is one column, an array of rows, or an object of named columns. Refuses with <code>"collinear"</code>, naming the column.</td></tr>
+<tr><td>LinearModel</td><td><code>coefficients</code>, <code>fitted</code>, <code>residuals</code>, <code>sse</code>, <code>ssr</code>, <code>sst</code>, <code>rSquared</code>, <code>adjustedRSquared</code>, <code>variance</code>, <code>sigma</code>, <code>covariance</code>, <code>leverage</code>, <code>cooksDistance</code>; <code>coefficient(name)</code>, <code>test(name, { value, alternative })</code>, <code>interval(name, { level })</code>, <code>table()</code>, <code>fTest()</code>, <code>predict(x)</code>, <code>predictionInterval(x, { kind: "mean" | "new" })</code>, <code>standardizedResiduals()</code>.</td></tr>
+<tr><td>polyFit(x, y, degree)</td><td>Regression on \(x, x^2, \dots\).</td></tr>
+<tr><td>dummies(labels, { reference, name })</td><td>Indicator columns, one per level but the reference.</td></tr>
+<tr><td>compareModels(small, big)</td><td>F test of nested models; checks the nesting exactly.</td></tr>
+<tr><td>anova(groups)</td><td>One-way analysis of variance: <code>table</code>, <code>means</code>, <code>grandMean</code>, <code>etaSquared</code> and the F test.</td></tr>
+</table></div>
+
 <h2><a href="sampling.html">Sampling</a>, <a href="models.html">models</a> and <a href="experiments.html">experiments</a></h2>
 <div class="tablewrap"><table class="ref">
 <tr><th>Export</th><th>What it does</th></tr>

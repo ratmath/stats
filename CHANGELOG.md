@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
+
+### Added
+
+- Inference: `zTest`, `tTest` (one-sample, paired, Welch, pooled), `meanInterval`, `varianceInterval`, `varianceTest`, `fTest`, `proportionTest` (one and two samples, Wilson intervals), `chiSquareTest` (goodness of fit and independence, Yates' correction), `correlationTest`. Statistics are exact where possible (t², X², F); p-values are certified; interval ends are rounded outward.
+- `fit`: maximum likelihood or moments for ten families.
+- Regression: `linearModel` with exact coefficients, coefficient tests and intervals, prediction intervals, leverage and Cook's distance; `polyFit`, `dummies`, `compareModels`, `anova`.
+- Tests that check identities between procedures exactly, and seeded experiments that check coverage and size.
+- Docs: pages on tests for means, variances and proportions, chi-square tests, fitting distributions, testing the tests, linear regression and analysis of variance; a two-column panel on the explore page.
+
+## 0.1.0
 
 ### Added
 

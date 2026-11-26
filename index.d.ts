@@ -235,6 +235,102 @@ export function permutationTest(
   options?: { statistic?: "mean" | "median" | ((values: Rational[]) => Num); alternative?: Alternative; paired?: boolean; limit?: number; resamples?: number; seed?: Seed },
 ): TestResult & { arrangements: bigint; pValueInterval?: { low: Value; high: Value; level: Rational }; seed?: Seed };
 
+// ---- estimation, intervals and the standard tests ------------------------------------
+
+/** An interval with rational ends rounded outward; an open end of a one-sided interval is null. */
+export interface Interval { low: Rational | null; high: Rational | null; level: Rational; estimate: Value; method?: string }
+export interface TTestResult extends TestResult {
+  readonly statistic: Value;
+  /** t² exactly. */
+  readonly statisticSquared: Rational;
+  readonly df: Rational;
+  readonly estimate: Rational;
+  readonly null: Rational;
+  readonly standardError: Value;
+  interval(options?: { level?: Num; alternative?: Alternative; bits?: number }): Interval;
+}
+export function zTest(data: Num[], options: { sigma: Num; mu?: Num; alternative?: Alternative; bits?: number }): TTestResult;
+export function tTest(x: Num[], options?: { mu?: Num; alternative?: Alternative; bits?: number }): TTestResult;
+export function tTest(x: Num[], y: Num[], options?: { mu?: Num; paired?: boolean; equalVariance?: boolean; alternative?: Alternative; bits?: number }): TTestResult;
+export function meanInterval(data: Num[], options?: { level?: Num; sigma?: Num; alternative?: Alternative; bits?: number }): Interval;
+export function varianceInterval(data: Num[], options?: { level?: Num; bits?: number }): Interval & { sd: { low: Rational; high: Rational } };
+export function varianceTest(data: Num[], variance0: Num, options?: { alternative?: Alternative; bits?: number }): TestResult & { statistic: Rational; df: number };
+export function fTest(x: Num[], y: Num[], options?: { ratio?: Num; alternative?: Alternative; bits?: number }): TestResult & { statistic: Rational; df: [number, number]; interval(options?: { level?: Num }): Interval };
+export function proportionTest(successes: number, trials: number, p0?: Num, options?: { alternative?: Alternative; correct?: boolean; bits?: number }): TTestResult;
+export function proportionTest(successes: [number, number], trials: [number, number], options?: { alternative?: Alternative; bits?: number }): TTestResult;
+export interface ChiSquareResult extends TestResult {
+  readonly statistic: Rational;
+  readonly df: number;
+  readonly expected: Rational[] | Rational[][];
+  readonly contributions: Rational[] | Rational[][];
+  /** An expected count is below 5. */
+  readonly smallExpected: boolean;
+}
+export function chiSquareTest(observed: number[] | number[][], options?: { p?: Num[]; expected?: Num[]; estimated?: number; correct?: boolean; bits?: number }): ChiSquareResult;
+export function correlationTest(x: Num[], y: Num[], options?: { alternative?: Alternative; bits?: number }): TestResult & { estimate: Value; rSquared: Rational; statisticSquared: Rational | null; df: number; interval(options?: { level?: Num; bits?: number }): Interval };
+export type Family = "normal" | "exponential" | "poisson" | "bernoulli" | "binomial" | "geometric" | "uniform" | "gamma" | "beta" | "lognormal";
+export interface FittedFamily {
+  family: Family;
+  method: "mle" | "moments";
+  n: number;
+  params: Record<string, Value | number | boolean>;
+  /** The fitted distribution, when its parameters are exact. */
+  distribution: Continuous | Discrete | null;
+}
+export function fit(data: Num[], family: Family, options?: { method?: "mle" | "moments"; trials?: number; failures?: boolean; bits?: number }): FittedFamily;
+
+// ---- regression and analysis of variance ------------------------------------------------
+
+export type Predictors = Num[] | Num[][] | Record<string, Num[]>;
+export class LinearModel {
+  readonly n: number;
+  /** The number of coefficients. */
+  readonly p: number;
+  /** Residual degrees of freedom, n − p. */
+  readonly df: number;
+  readonly intercept: boolean;
+  readonly names: string[];
+  readonly coefficients: Rational[];
+  readonly fitted: Rational[];
+  readonly residuals: Rational[];
+  readonly sse: Rational;
+  readonly ssr: Rational;
+  readonly sst: Rational;
+  readonly rSquared: Rational;
+  readonly adjustedRSquared: Rational | null;
+  /** s² = sse/df. */
+  readonly variance: Rational | null;
+  readonly sigma: Value | null;
+  /** s²(XᵀX)⁻¹. */
+  readonly covariance: Rational[][] | null;
+  readonly leverage: Rational[];
+  readonly cooksDistance: (Rational | null)[];
+  readonly columns: Rational[][];
+  readonly y: Rational[];
+  coefficient(name: string | number): Rational;
+  test(name: string | number, options?: { value?: Num; alternative?: Alternative; bits?: number }): TTestResult;
+  interval(name: string | number, options?: { level?: Num; alternative?: Alternative; bits?: number }): Interval;
+  table(options?: Bits): Array<{ name: string; estimate: Rational; standardError: Value; t: Value; pValue: Value }>;
+  fTest(options?: Bits): TestResult;
+  predict(x: Num | Num[] | Record<string, Num>): Rational;
+  predictionInterval(x: Num | Num[] | Record<string, Num>, options?: { level?: Num; kind?: "mean" | "new"; bits?: number }): Interval;
+  standardizedResiduals(options?: Bits): (Value | null)[];
+  toString(): string;
+}
+export function linearModel(x: Predictors, y: Num[], options?: { intercept?: boolean; names?: string[] }): LinearModel;
+export function polyFit(x: Num[], y: Num[], degree: number, options?: { intercept?: boolean }): LinearModel;
+export function dummies(labels: Iterable<unknown>, options?: { reference?: unknown; name?: string }): Record<string, number[]>;
+export function compareModels(small: LinearModel, big: LinearModel, options?: Bits): TestResult;
+export interface AnovaResult extends TestResult {
+  readonly statistic: Rational | null;
+  readonly df: [number, number];
+  readonly table: Array<{ source: string; df: number; ss: Rational; ms: Rational | null }>;
+  readonly means: Record<string, Rational>;
+  readonly grandMean: Rational;
+  readonly etaSquared: Rational | null;
+}
+export function anova(groups: Num[][] | Record<string, Num[]>, options?: Bits): AnovaResult;
+
 // ---- models and experiments -------------------------------------------------------
 
 export type Source = Continuous | Discrete | Finite<any> | ((rng: Random) => Num) | Num;

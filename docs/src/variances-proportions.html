@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Variances and proportions · RatMath Stats</title>
+<meta name="description" content="Chi-square intervals and tests for a variance, the F test for two variances, and z tests and intervals for one and two proportions in @ratmath/stats.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Inference</div>
+<h1>Variances and proportions</h1>
+<p class="lede">The spread of normal data is judged with the chi-square and F distributions, and proportions with the normal approximation. The statistics are exact fractions; the p-values and interval ends are certified.</p>
+<h2>One variance</h2>
+<p>For normal data \((n-1)s^2/\sigma^2\) has the chi-square distribution with \(n - 1\) degrees of freedom. So</p>
+\[ \left( \frac{(n-1)s^2}{\chi^2_{n-1,\,1-\alpha/2}},\ \frac{(n-1)s^2}{\chi^2_{n-1,\,\alpha/2}} \right) \]
+<p>is a confidence interval for \(\sigma^2\), and its square roots one for \(\sigma\). Unlike the t interval it is not symmetric, and it leans heavily on normality: with heavy tails its coverage drops well below the level.</p>
+<pre><code>// Student's sleep data (1908): extra hours of sleep for ten patients on two drugs
+const drug1 = [0.7, -1.6, -0.2, -1.2, -0.1, 3.4, 3.7, 0.8, 0.0, 2.0];
+const drug2 = [1.9, 0.8, 1.1, 0.1, -0.1, 4.4, 5.5, 1.6, 4.6, 3.4];
+import { varianceInterval, varianceTest, fTest, proportionTest, show } from "@ratmath/stats";
+
+varianceInterval(drug1);          // σ² between 1.5142… and 10.6670…; estimate 3.200556; sd from 1.2305 to 3.2660
+varianceTest(drug1, 4).statistic; // 5761/800 = (n − 1)s²/σ0², exactly
+String(varianceTest(drug1, 4));   // "chi-square test for a variance: p = 0.767649 (certified, two-sided)"</code></pre>
+<p>The two-sided p-value of an asymmetric statistic is twice the smaller tail, capped at 1.</p>
+
+<h2>Two variances</h2>
+<p>The ratio \((s_1^2/\sigma_1^2)/(s_2^2/\sigma_2^2)\) has the \(F(n_1 - 1, n_2 - 1)\) distribution. <code>fTest</code> tests a stated ratio (1 by default) and its interval is for \(\sigma_1^2/\sigma_2^2\).</p>
+<pre><code>const f = fTest(drug1, drug2);
+f.statistic;     // 28805/36081
+f.interval();    // from 0.1983… to 3.2141…</code></pre>
+
+<h2>Proportions</h2>
+<p>With \(k\) successes in \(n\) trials, \(H_0: p = p_0\) is tested by</p>
+\[ z^2 = \frac{(k - np_0)^2}{np_0(1 - p_0)}, \]
+<p>compared with \(\chi^2_1\). For two samples the pooled proportion \(\hat p = (k_1 + k_2)/(n_1 + n_2)\) gives \(z^2 = (\hat p_1 - \hat p_2)^2 / \bigl(\hat p(1 - \hat p)(1/n_1 + 1/n_2)\bigr)\), which is exactly the chi-square statistic of the 2×2 table. The interval for one proportion is Wilson's; for a difference it is the Wald interval.</p>
+<pre><code>proportionTest(527, 1000);                  // p = 0.087705; z² = 729/250
+binomialTest(527, 1000);                    // the exact test: p = 0.093687
+proportionTest(527, 1000, "1/2", { correct: true });    // with Yates's continuity correction
+proportionTest([45, 30], [100, 100]);       // p = 0.028460; the difference 3/20
+proportionTest([45, 30], [100, 100]).interval();        // from 0.0174… to 0.2826…</code></pre>
+<p>The normal approximation is a convenience. For small counts the <a href="exact-tests.html">exact binomial and Fisher tests</a> give p-values as fractions and need no approximation at all.</p>
+<template data-runbox>
+// Student's sleep data (1908): extra hours of sleep for ten patients on two drugs
+const drug1 = [0.7, -1.6, -0.2, -1.2, -0.1, 3.4, 3.7, 0.8, 0.0, 2.0];
+const drug2 = [1.9, 0.8, 1.1, 0.1, -0.1, 4.4, 5.5, 1.6, 4.6, 3.4];
+const v = varianceInterval(drug1);
+PRINT("σ² in", show(v.low, 4), "to", show(v.high, 4), "; σ in", show(v.sd.low, 4), "to", show(v.sd.high, 4));
+PRINT(String(fTest(drug1, drug2)));
+// the z test against the exact binomial test, as n grows with the same proportion
+for (const n of [20, 100, 1000]) {
+  const k = Math.round(n * 0.56);
+  PRINT(n, show(proportionTest(k, n).pValue, 5), show(binomialTest(k, n).pValue, 5));
+}
+// two proportions and the 2×2 chi-square: the same statistic
+const z = proportionTest([45, 30], [100, 100]);
+PRINT(z.statisticSquared, chiSquareTest([[45, 55], [30, 70]]).statistic);
+z.interval()
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

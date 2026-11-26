@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Linear regression · RatMath Stats</title>
+<meta name="description" content="Least squares with exact coefficients in @ratmath/stats: t tests and intervals for coefficients, prediction intervals, leverage, Cook&#x27;s distance, polynomial fits and nested-model F tests.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Regression</div>
+<h1>Linear regression</h1>
+<p class="lede">Least squares has a closed form, so with rational data the coefficients, fitted values, residuals and R² come out as exact fractions. Only the inference on top of them (p-values, interval ends) needs the certified distributions.</p>
+<h2>A line through the data</h2>
+<pre><code>// hours of study and exam score for ten students
+const hours = [1, 2, 2, 3, 4, 5, 5, 6, 7, 8];
+const score = [52, 55, 61, 60, 68, 70, 74, 75, 83, 86];
+import { linearModel, show } from "@ratmath/stats";
+
+const m = linearModel(hours, score);
+String(m);         // "y = 22847/481 + 2338/481·x  (n = 10, R² = 1366561/1412216)"
+m.coefficients;    // [22847/481, 2338/481]: about 47.50 and 4.861
+m.variance;        // 9131/1924: s², the residual variance on n − p = 8 degrees of freedom
+m.table();         // estimate, standard error, t and p-value for each coefficient
+m.interval("x");   // slope between 4.1364 and 5.5850 (95%)
+m.fTest();         // F test of the whole regression</code></pre>
+<p>With a design matrix \(X\) (a column of ones for the intercept, then one column per predictor) and responses \(y\), least squares minimises \(\lVert y - X\beta \rVert^2\). The minimiser solves the <strong>normal equations</strong></p>
+\[ X^\top X\, \hat\beta = X^\top y. \]
+<p>The package forms \(X^\top X\) exactly and inverts it by Gauss–Jordan elimination over the rationals, so \(\hat\beta\), the fitted values \(\hat y = X\hat\beta\) and the residuals \(e = y - \hat y\) are exact. So are the sums of squares \(SSE = \sum e_i^2\), \(SST = \sum (y_i - \bar y)^2\), \(R^2 = 1 - SSE/SST\) and the residual variance \(s^2 = SSE/(n-p)\). If one column is a linear combination of the others \(X^\top X\) is singular; the fit refuses with code <code>"collinear"</code> and names the column that breaks the rank.</p>
+
+<h2>Inference on the coefficients</h2>
+<p>Under the usual model, \(y = X\beta + \varepsilon\) with independent \(N(0, \sigma^2)\) errors, \(\hat\beta\) is normal with covariance \(\sigma^2 (X^\top X)^{-1}\). Replacing \(\sigma^2\) by \(s^2\) gives, for each coefficient,</p>
+\[ t_j = \frac{\hat\beta_j - b}{s\sqrt{[(X^\top X)^{-1}]_{jj}}} \sim t_{n-p}. \]
+<p>As with the t tests, \(t_j^2\) is exact and the p-value comes from \(F(1, n-p)\) at that exact argument. The overall F test compares the model with the intercept alone: \(F = \frac{SSR/(p-1)}{SSE/(n-p)}\), an exact fraction.</p>
+
+<h2>Predicting</h2>
+<pre><code>m.predict(6);                                   // 36875/481 ≈ 76.66
+m.predictionInterval(6);                        // the mean score at 6 hours: [74.6532, 78.6732]
+m.predictionInterval(6, { kind: "new" });       // one new student: [71.2524, 82.0740]</code></pre>
+<p>At a new point \(x_0\) (with its leading 1), the fitted mean \(x_0^\top\hat\beta\) has standard error \(s\sqrt{h_0}\) with \(h_0 = x_0^\top (X^\top X)^{-1} x_0\). A single new observation adds its own noise, so its interval uses \(s\sqrt{1 + h_0}\) and is always wider: it never shrinks to zero however much data there is.</p>
+
+<h2>Leverage and influence</h2>
+<pre><code>m.leverage;               // the diagonal of the hat matrix, exact: 157/481, 101/481, …, 5/13
+m.standardizedResiduals();// eᵢ / (s√(1 − hᵢ))
+m.cooksDistance;          // the third student (2 hours, 61 points) has the most influence: 0.506</code></pre>
+<p>The <strong>hat matrix</strong> \(H = X(X^\top X)^{-1}X^\top\) maps \(y\) to \(\hat y\); its diagonal entries \(h_i\), the <strong>leverages</strong>, lie in \([0, 1]\), sum to \(p\), and measure how far point \(i\) sits from the others in predictor space. <strong>Cook's distance</strong></p>
+\[ D_i = \frac{e_i^2}{p\, s^2} \cdot \frac{h_i}{(1 - h_i)^2} \]
+<p>measures how far all the fitted values move when point \(i\) is left out; the test suite checks this formula against refitting without each point. Both are exact here.</p>
+
+<h2>Several predictors, and curves</h2>
+<pre><code>const house = linearModel({ size: [50, 70, 80, 100, 120, 60, 90, 110], rooms: [2, 3, 3, 4, 4, 2, 3, 5] },
+                          [150, 200, 230, 270, 330, 165, 250, 300]);
+String(house);   // "y = 8405/472 + 1231/472·size − 95/118·rooms  (n = 8, R² = 526772/529525)"
+house.predict({ size: 85, rooms: 3 });   // 27975/118
+// rooms adds nothing once size is known: p = 0.8667
+
+const q2 = polyFit([0, 1, 2, 3, 4, 5, 6], [1.2, 1.9, 4.8, 9.6, 16.5, 25.4, 36.1], 2);
+String(q2);      // "y = 241/210 − 5/28·x + 421/420·x^2  (…)"
+compareModels(q2, polyFit([0, 1, 2, 3, 4, 5, 6], [1.2, 1.9, 4.8, 9.6, 16.5, 25.4, 36.1], 3));
+                 // F = 7.56, p = 0.070769: the cubic term is not needed at 5%</code></pre>
+<p>A polynomial fit is linear regression on the columns \(x, x^2, \dots, x^d\). Two <strong>nested</strong> models, the smaller one's columns a subset of the larger one's, are compared by</p>
+\[ F = \frac{(SSE_{\text{small}} - SSE_{\text{big}})/(p_{\text{big}} - p_{\text{small}})}{SSE_{\text{big}}/(n - p_{\text{big}})}, \]
+<p>which has the \(F(p_{\text{big}} - p_{\text{small}},\ n - p_{\text{big}})\) distribution when the extra terms are zero. <code>compareModels</code> checks the nesting exactly before it computes anything.</p>
+<template data-runbox>
+// hours of study and exam score for ten students
+const hours = [1, 2, 2, 3, 4, 5, 5, 6, 7, 8];
+const score = [52, 55, 61, 60, 68, 70, 74, 75, 83, 86];
+const m = linearModel(hours, score);
+PRINT(String(m));
+for (const r of m.table()) PRINT(r.name.padEnd(12), String(r.estimate).padEnd(10), "se", show(r.standardError, 4), " t", show(r.t, 4));
+const ci = m.interval("x");
+PRINT("slope, 95%:", show(ci.low, 4), "to", show(ci.high, 4));
+const pi = m.predictionInterval(6, { kind: "new" });
+PRINT("a new student at 6 hours:", show(pi.low, 4), "to", show(pi.high, 4));
+// the leverages sum to the number of coefficients, exactly
+PRINT("sum of leverages:", String(m.leverage.reduce((a, b) =&gt; a.add(b))));
+// a seeded line with known slope 3: does the 95% interval catch it?
+const line = model({ truth: [2, 3], x: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], noise: normal(0, 2), round: "1/100" });
+coverage({ model: line, n: 10, interval: (d) =&gt; linearModel(d.x, d.y).interval("x", { bits: 32 }), truth: 3, runs: 100, seed: 8 }).toString()
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

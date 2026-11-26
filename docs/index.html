@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="https://ratmath.com/assets/katex/0.19.1/katex.min.css">
-<link rel="stylesheet" href="assets/style.css?v=f9485bdd3e">
-<script type="module" src="assets/site.js?v=f9485bdd3e"></script>
+<link rel="stylesheet" href="assets/style.css?v=99d7635b4b">
+<script type="module" src="assets/site.js?v=99d7635b4b"></script>
 </head>
 <body>
 <div class="shell">
@@ -55,6 +55,9 @@ String(estimatorStudy({ model: line, n: 50, truth: 0.5, runs: 2000, seed: 1,
 <h2>Data from a truth you chose</h2>
 <p>The part of this library that most packages lack: say what the truth is, say how observations depart from it (noise, unequal spread, contamination, error in <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.4306em;"></span><span class="mord mathnormal">x</span></span></span></span>, rounding, censoring, missing values), draw data, and see whether a test or a regression recovers what you put in. Changing one departure leaves the random numbers of the others alone, so two versions of a model can be compared on the same data. See <a href="models.html">Models with noise</a>.</p>
 
+<h2>Inference and regression</h2>
+<p>The standard tests and intervals (z and t tests, chi-square and F tests, proportions, fitted distributions) keep their statistic exact where it can be: <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>t</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">t^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span>, <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>X</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">X^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0785em;">X</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span> and <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi></mrow><annotation encoding="application/x-tex">F</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">F</span></span></span></span> are fractions, and the p-value is a certified enclosure computed at that exact argument. Linear regression and analysis of variance solve the normal equations over the rationals, so coefficients, residuals, leverages and <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>R</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">R^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0077em;">R</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span> are exact. The package's own tests then use seeded models to check that the intervals cover and the tests have their stated size; see <a href="testing-the-tests.html">Testing the tests</a>.</p>
+
 <h2>What is planned</h2>
 <p>From the <a href="https://github.com/ratmath/ratmath/blob/main/docs/design/library-roadmap.md#6-a-probability-and-statistics-package-ratmathstats">library roadmap</a>. Sizes are rough estimates in lines of source.</p>
 <div class="tablewrap"><table class="plan">
@@ -62,8 +65,8 @@ String(estimatorStudy({ model: line, n: 50, truth: 0.5, runs: 2000, seed: 1,
 <tr><td>1</td><td>Finite probability, discrete distributions, descriptive statistics, exact tests</td><td>built</td></tr>
 <tr><td>2</td><td>Continuous distributions, certified</td><td>built</td></tr>
 <tr><td>3</td><td>Seeded generation, models with noise and contamination, experiments</td><td>built</td></tr>
-<tr><td>4</td><td>Estimation, confidence intervals, the standard tests</td><td>1,000</td></tr>
-<tr><td>5</td><td>Regression and analysis of variance</td><td>1,100</td></tr>
+<tr><td>4</td><td>Estimation, confidence intervals, the standard tests</td><td>built</td></tr>
+<tr><td>5</td><td>Regression and analysis of variance</td><td>built</td></tr>
 <tr><td>6</td><td>Rank tests, permutation tests, the bootstrap</td><td>700</td></tr>
 <tr><td>7</td><td>Markov chains; conjugate Bayesian updating</td><td>700</td></tr>
 <tr><td>8</td><td>Graphics hooks</td><td>800 in graphics</td></tr>
@@ -92,7 +95,7 @@ sim.compare(X.sf(10))   // is the exact answer inside the simulation's interval?
 </main>
 </div>
 <script type="module">
-import { topicCards } from "./assets/site.js?v=f9485bdd3e";
+import { topicCards } from "./assets/site.js?v=99d7635b4b";
 topicCards(document.getElementById("cards"));
 </script>
 </body>
