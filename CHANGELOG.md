@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0
+
+### Added
+
+- Rank tests: `ranks`, `signTest`, `wilcoxonTest` (with the Hodges–Lehmann estimate), `mannWhitneyTest`, `kruskalWallisTest`, `spearmanTest`, `kendallTest`. Null distributions are counted exactly with ties (midranks), with a certified normal approximation for large samples; `method` says which.
+- Kolmogorov–Smirnov: `ksTest` for one sample (against a certified Continuous or an exact cdf) and two samples (exact by counting lattice paths); `kolmogorovCdf` (Marsaglia–Tsang–Wang, exact), `smirnovTail`, `kolmogorovTail`.
+- `bootstrap`: percentile and basic intervals, exact over every resample for small samples, otherwise seeded.
+- Markov chains: `markovChain` with n-step distributions, classes and periods, stationary distributions, absorption probabilities and steps (the fundamental matrix), hitting times, mean return times and seeded paths, all exact.
+- Conjugate updating: `betaPrior`, `gammaPrior` (Poisson or exponential), `normalPrior` (known variance), `dirichletPrior`, with exact posterior parameters and predictive probabilities and certified credible intervals.
+- Tests compare with published values (R's examples, Marsaglia–Tsang–Wang) and with brute-force counts over every sign pattern, split and path.
+- Docs: pages on rank tests, Kolmogorov–Smirnov, the bootstrap, Markov chains and Bayesian updating.
+
 ## 0.2.0
 
 ### Added

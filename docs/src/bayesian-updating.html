@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bayesian updating · RatMath Stats</title>
+<meta name="description" content="Conjugate Bayesian updating in @ratmath/stats: beta–binomial, gamma–Poisson, gamma–exponential, normal with known variance and Dirichlet–multinomial, with exact posterior parameters and predictive probabilities and certified credible intervals.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Chains and beliefs</div>
+<h1>Bayesian updating</h1>
+<p class="lede">Bayes' rule turns a prior belief and data into a posterior belief. For the conjugate pairs the posterior stays in the prior's family and its parameters are sums of the data, so updating is exact arithmetic. Means, variances and predictive probabilities are fractions; credible intervals are certified quantiles.</p>
+<h2>A probability: beta and binomial</h2>
+<pre><code>import { betaPrior } from "@ratmath/stats";
+
+const prior = betaPrior(1, 1);                       // uniform on [0, 1]
+const post = prior.update({ successes: 7, trials: 10 });
+String(post);           // "Beta(8, 4): mean 0.666667"
+post.mean;              // 2/3
+post.mode;              // 7/10, the maximum-likelihood estimate
+post.interval("0.95");  // certified enclosures of the 2.5% and 97.5% quantiles
+post.predictive(3).table;   // [5/91, 20/91, 36/91, 30/91]: successes in the next 3 trials</code></pre>
+<p>With prior density proportional to \(p^{a-1}(1-p)^{b-1}\) and \(k\) successes in \(n\) trials, the posterior is proportional to</p>
+\[ p^{a-1}(1-p)^{b-1}\cdot p^{k}(1-p)^{n-k} = p^{a+k-1}(1-p)^{b+n-k-1}, \]
+<p>which is \(\mathrm{Beta}(a + k,\, b + n - k)\). Updating twice is updating once with the pooled data, and the order does not matter: the test suite checks both. The predictive law of the next \(m\) trials is beta-binomial, \(P(K = j) = \binom mj \frac{(a)_j (b)_{m-j}}{(a+b)_m}\), with rising factorials, exact.</p>
+
+<h2>A rate: gamma with Poisson or exponential data</h2>
+<pre><code>import { gammaPrior } from "@ratmath/stats";
+const calls = gammaPrior(2, 1).update([3, 4, 2, 5]);   // calls per hour in four hours
+String(calls);                  // "Gamma(shape 16, rate 5): mean 3.200000"
+calls.predictive().pmf(3);      // the chance of exactly 3 calls next hour, exact
+const life = gammaPrior(1, 1, { likelihood: "exponential" }).update([0.5, 1.5]);
+life.params;                    // { shape: 3, rate: 3 }</code></pre>
+<p>For Poisson counts \(x_1, \dots, x_n\) the posterior of a \(\mathrm{Gamma}(\alpha, \beta)\) prior is \(\mathrm{Gamma}(\alpha + \sum x_i,\, \beta + n)\); for exponential waiting times it is \(\mathrm{Gamma}(\alpha + n,\, \beta + \sum x_i)\). The predictive law of the next Poisson count is negative binomial.</p>
+
+<h2>A mean: normal with known variance</h2>
+<pre><code>import { normalPrior } from "@ratmath/stats";
+const m = normalPrior(0, { variance: 4, dataVariance: 1 }).update([1.2, 0.8, 1.0, 1.4]);
+m.variance;   // 4/17: precisions add, 1/4 + 4/1 = 17/4
+m.mean;       // 88/85: the precision-weighted average of 0 and the sample mean 11/10</code></pre>
+\[ \frac{1}{\tau_1^2} = \frac{1}{\tau_0^2} + \frac{n}{\sigma^2}, \qquad \mu_1 = \tau_1^2\Bigl(\frac{\mu_0}{\tau_0^2} + \frac{\sum x_i}{\sigma^2}\Bigr). \]
+<p>The more data, the more the posterior mean follows the sample and the less the prior.</p>
+
+<h2>Several categories: Dirichlet and multinomial</h2>
+<pre><code>import { dirichletPrior } from "@ratmath/stats";
+const d = dirichletPrior({ red: 1, green: 1, blue: 1 }).update({ red: 5, green: 2 });
+d.mean;               // { red: 3/5, green: 3/10, blue: 1/10 }
+d.marginal("red");    // Beta(6, 4): the belief about red alone</code></pre>
+<p>Each category's weight grows by its count; the marginal belief about one category's probability is a beta distribution, so its credible interval comes from <code>marginal(category).interval()</code>.</p>
+<template data-runbox>
+// A coin observed in batches: the belief narrows, and the order of the batches does not matter.
+let b = betaPrior(1, 1);
+const batches = [{ successes: 3, trials: 5 }, { successes: 6, trials: 10 }, { successes: 33, trials: 50 }];
+for (const batch of batches) {
+  b = b.update(batch);
+  const ci = b.interval("0.9", { bits: 32 });
+  PRINT(String(b).padEnd(32), " 90% credible:", show(ci.low, 4), "to", show(ci.high, 4));
+}
+const reversed = batches.slice().reverse().reduce((p, x) =&gt; p.update(x), betaPrior(1, 1));
+PRINT("same posterior in reverse order:", String(reversed.params.a) === String(b.params.a) &amp;&amp; String(reversed.params.b) === String(b.params.b));
+// Exact predictive probabilities: how many heads in the next 4 tosses?
+b.predictive(4).table.map((p) =&gt; show(p, 4))
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

@@ -21,5 +21,11 @@ export {
 } from "./src/inference.js";
 export { LinearModel, linearModel, polyFit, dummies, compareModels, anova } from "./src/regression.js";
 export { SimulatedRate, SimulatedEstimates, howOften, coverage, rejectionRate, powerCurve, estimatorStudy } from "./src/experiment.js";
+export {
+  ranks, signTest, wilcoxonTest, mannWhitneyTest, kruskalWallisTest, spearmanTest, kendallTest,
+  ksTest, kolmogorovCdf, kolmogorovTail, smirnovTail, bootstrap, Bootstrap,
+} from "./src/rank.js";
+export { MarkovChain, markovChain } from "./src/markov.js";
+export { betaPrior, gammaPrior, normalPrior, dirichletPrior } from "./src/conjugate.js";
 export { rng, Random } from "@ratmath/discrete";
 export { plan } from "./src/plan.js";

@@ -1,7 +1,7 @@
 {
   "name": "@ratmath/stats",
-  "version": "0.2.0",
-  "description": "Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests and regression",
+  "version": "0.3.0",
+  "description": "Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating",
   "type": "module",
   "main": "index.js",
   "exports": {

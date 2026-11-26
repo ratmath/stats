@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rank tests · RatMath Stats</title>
+<meta name="description" content="Sign, Wilcoxon signed-rank, Mann–Whitney, Kruskal–Wallis, Spearman and Kendall tests in @ratmath/stats, with exact p-values by counting, ties included.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Nonparametric</div>
+<h1>Rank tests</h1>
+<p class="lede">A rank test looks only at the order of the data, so it needs no assumption of normality. Its null distribution is a counting problem, and here it is counted: the p-value is an exact fraction, with ties handled by midranks, until the sample is large enough that the normal approximation takes over.</p>
+<h2>Paired data: sign and signed-rank tests</h2>
+<pre><code>// Hamilton depression scores before and after treatment, nine patients
+const before = [1.83, 0.50, 1.62, 2.48, 1.68, 1.88, 1.55, 3.06, 1.30];
+const after  = [0.878, 0.647, 0.598, 2.05, 1.06, 1.29, 1.06, 3.14, 1.29];
+import { signTest, wilcoxonTest, tTest } from "@ratmath/stats";
+
+signTest(before, after).pValue;          // 23/128: 7 of 9 differences are positive
+const w = wilcoxonTest(before, after);
+w.statistic;                             // 40: the sum of the ranks of the positive differences
+w.pValue;                                // 5/128 = 0.0390625, exact
+w.estimate;                              // 23/50: the Hodges–Lehmann estimate of the shift
+tTest(before, after, { paired: true });  // p = 0.016177 (certified), assuming normal differences</code></pre>
+<p>The <strong>sign test</strong> asks only whether each difference is positive. If the median difference is 0, the number of positives among the \(n\) non-zero differences is binomial with \(p = 1/2\), so the p-value is a binomial tail. The <strong>signed-rank test</strong> also uses how large the differences are: rank the \(|d_i|\) and add the ranks of the positive ones,</p>
+\[ W^+ = \sum_{d_i &gt; 0} \operatorname{rank}(|d_i|). \]
+<p>If the differences are symmetric about 0, each sign is a fair coin independent of the ranks, so all \(2^n\) sign patterns are equally likely. The distribution of \(W^+\) over them is counted by dynamic programming: adding one rank \(r\) either leaves the sum alone or adds \(r\). Ties take midranks, and doubling them makes every rank a whole number, so the count stays exact. Above \(n = 60\) the default is the normal approximation with the tie-corrected variance</p>
+\[ \operatorname{Var} W^+ = \frac{n(n+1)(2n+1)}{24} - \frac{1}{48}\sum_t (t^3 - t), \]
+<p>where \(t\) runs over the sizes of the tie groups; <code>method: "exact"</code> counts anyway.</p>
+
+<h2>Two groups: Mann–Whitney</h2>
+<pre><code>import { mannWhitneyTest } from "@ratmath/stats";
+const x = [0.80, 0.83, 1.89, 1.04, 1.45, 1.38, 1.91, 1.64, 0.73, 1.46];
+const y = [1.15, 0.88, 0.90, 0.74, 1.21];
+const m = mannWhitneyTest(x, y);
+m.statistic;   // 35: pairs with x above y
+m.pValue;      // 764/3003 ≈ 0.2544, exact over all C(15, 5) = 3003 splits
+m.estimate;    // 61/200: the median of the 50 differences x − y
+mannWhitneyTest(x, y, { method: "normal" }).pValue;   // 0.244624, with continuity correction</code></pre>
+<p>\(U\) counts the pairs \((x_i, y_j)\) with \(x_i &gt; y_j\), ties counting a half; it equals the rank sum of the \(x\)'s minus \(m(m+1)/2\). Under the null hypothesis every way of choosing which \(m\) of the \(N = m + n\) pooled values are the \(x\)'s is equally likely, so the exact p-value is a count over \(\binom{N}{m}\) choices. That count is done by dynamic programming over the observed midranks, so tied data get the exact conditional distribution rather than an approximation.</p>
+
+<h2>Several groups: Kruskal–Wallis</h2>
+<pre><code>import { kruskalWallisTest } from "@ratmath/stats";
+const k = kruskalWallisTest([[2.9, 3.0, 2.5, 2.6, 3.2], [3.8, 2.7, 4.0, 2.4], [2.8, 3.4, 3.7, 2.2, 2.0]]);
+k.statistic;   // 27/35
+k.meanRanks;   // [36/5, 9, 33/5]
+k.pValue;      // 0.679965 from chi-square with 2 degrees of freedom</code></pre>
+<p>With \(R_i\) the rank sum of group \(i\), \(H = \frac{12}{N(N+1)}\sum_i \frac{R_i^2}{n_i} - 3(N+1)\), divided by \(1 - \sum(t^3 - t)/(N^3 - N)\) for ties. It is exact; the p-value uses the chi-square approximation with \(k - 1\) degrees of freedom, evaluated with certainty.</p>
+
+<h2>Rank correlation: Spearman and Kendall</h2>
+<pre><code>import { spearmanTest, kendallTest } from "@ratmath/stats";
+const a = [86, 97, 99, 100, 101, 103, 106, 110, 112, 113];
+const b = [2, 20, 28, 27, 50, 29, 7, 17, 6, 12];
+spearmanTest(a, b).statistic;   // −29/165: ρ = 1 − 6Σd²/(n(n² − 1)) without ties
+kendallTest(a, b).statistic;    // −1/9
+kendallTest(a, b).pValue;       // 0.727490, exact: permutations of 10 counted by inversions</code></pre>
+<p>Spearman's \(\rho\) is Pearson's correlation of the ranks. For \(n \le 9\) the p-value counts all \(n!\) orderings exactly; above that it uses \(t^2 = \rho^2(n-2)/(1-\rho^2)\) against \(F(1, n-2)\). Kendall's \(\tau\) compares every pair: \(S\) is concordant minus discordant pairs. Without ties, \(S = \binom n2 - 2I\) where \(I\) is the number of inversions of a permutation, and the number of permutations of \(n\) with \(I\) inversions satisfies a simple recurrence, so the exact distribution is cheap even for \(n = 60\).</p>
+<template data-runbox>
+// Hamilton depression scores before and after treatment, nine patients
+const before = [1.83, 0.50, 1.62, 2.48, 1.68, 1.88, 1.55, 3.06, 1.30];
+const after  = [0.878, 0.647, 0.598, 2.05, 1.06, 1.29, 1.06, 3.14, 1.29];
+// The exact signed-rank distribution, and the normal approximation beside it
+const w = wilcoxonTest(before, after);
+const z = wilcoxonTest(before, after, { method: "normal" });
+PRINT("W+ =", String(w.statistic), " exact p =", String(w.pValue), "=", show(w.pValue, 6), " normal p =", show(z.pValue, 6));
+// How often does each test reject at 5% when the data really shift by 1/2?
+// A seeded experiment with normal data: the t test is best here, the rank tests close behind.
+const r = rng("rank power");
+let hits = { t: 0, wilcoxon: 0, sign: 0 };
+for (let i = 0; i &lt; 200; i++) {
+  const d = normal("1/2", 1).samples(15, r.fork(`d${i}`));
+  if (tTest(d).reject()) hits.t++;
+  if (wilcoxonTest(d).reject()) hits.wilcoxon++;
+  if (signTest(d).reject()) hits.sign++;
+}
+PRINT("power over 200 runs:", JSON.stringify(hits));
+mannWhitneyTest([1, 2, 2, 3, 5], [2, 3, 4, 4]).pValue
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

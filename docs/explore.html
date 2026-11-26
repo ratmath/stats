@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Explore · RatMath Stats</title>
 <meta property="og:title" content="Explore · RatMath Stats">
-<meta property="og:description" content="Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests and regression.">
+<meta property="og:description" content="Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ratmath.com/stats/explore.html">
 <meta name="description" content="Try @ratmath/stats in the page: a distribution calculator with certified digits, exact summaries of your data, and a simulation that tests estimators on contaminated data.">
@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="https://ratmath.com/assets/katex/0.19.1/katex.min.css">
-<link rel="stylesheet" href="assets/style.css?v=99d7635b4b">
-<script type="module" src="assets/site.js?v=99d7635b4b"></script>
+<link rel="stylesheet" href="assets/style.css?v=0e32c28f5e">
+<script type="module" src="assets/site.js?v=0e32c28f5e"></script>
 </head>
 <body>
 <div class="shell">
@@ -88,7 +88,7 @@ for (const [name, f] of [["mean", fast.mean], ["median", fast.median]]) {
 </main>
 </div>
 <script type="module">
-import { A as S, h } from "./assets/site.js?v=99d7635b4b";
+import { A as S, h } from "./assets/site.js?v=0e32c28f5e";
 const $ = (id) => document.getElementById(id);
 const row = (label, f) => {
   let text;

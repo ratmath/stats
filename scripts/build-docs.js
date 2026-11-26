@@ -15,7 +15,7 @@ import { runCode } from "../docs/assets/runbox.js";
 
 const NAME = "stats";
 const TITLE = "RatMath Statistics";
-const DESCRIPTION = "Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests and regression.";
+const DESCRIPTION = "Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating.";
 
 const out = await Bun.build({ entrypoints: ["./scripts/docs-entry.js"], outdir: "./docs/assets", naming: `${NAME}.js`, target: "browser", format: "esm", minify: { whitespace: true, syntax: true, identifiers: true, keepNames: true } });
 if (!out.success) {

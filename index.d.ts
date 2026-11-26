@@ -429,3 +429,127 @@ export interface PlannedPhase {
 }
 /** The phases that are not built yet. */
 export const plan: readonly PlannedPhase[];
+
+// ---- rank tests, Kolmogorov–Smirnov, the bootstrap (phase 6) -------------------
+
+export type RankMethod = "auto" | "exact" | "normal";
+/** Midranks (ties share the average rank) and the sizes of the tie groups. */
+export function ranks(data: Num[]): { ranks: Rational[]; ties: number[] };
+/** The sign test: exact, by the binomial law of the positive differences; zeros dropped. */
+export function signTest(x: Num[], y?: Num[] | { mu?: Num; alternative?: Alternative }, options?: { mu?: Num; alternative?: Alternative }): TestResult & { n: number; zeros: number };
+/** Wilcoxon's signed-rank test (one sample, or paired with y). Exact up to n = 60 by default. */
+export function wilcoxonTest(
+  x: Num[],
+  y?: Num[] | { mu?: Num; alternative?: Alternative; method?: RankMethod; correct?: boolean; bits?: number },
+  options?: { mu?: Num; alternative?: Alternative; method?: RankMethod; correct?: boolean; bits?: number; paired?: boolean },
+): TestResult & { n: number; mean: Rational; variance: Rational; estimate: Rational; method: "exact" | "normal" };
+/** The Mann–Whitney (rank-sum) test; U and the Hodges–Lehmann shift estimate. */
+export function mannWhitneyTest(x: Num[], y: Num[], options?: { alternative?: Alternative; method?: RankMethod; correct?: boolean; bits?: number }): TestResult & {
+  rankSum: Rational;
+  m: number;
+  n: number;
+  mean: Rational;
+  variance: Rational;
+  estimate: Rational;
+  method: "exact" | "normal";
+};
+/** The Kruskal–Wallis test: H exact, p from chi-square(k − 1), certified. */
+export function kruskalWallisTest(groups: Num[][], options?: { bits?: number }): TestResult & { df: number; meanRanks: Rational[] };
+/** Spearman's ρ (exact without ties, else certified) with an exact permutation p for n ≤ 9. */
+export function spearmanTest(x: Num[], y: Num[], options?: { alternative?: Alternative; method?: RankMethod; bits?: number }): TestResult & { rho2: Rational; n: number };
+/** Kendall's τ (τ_b with ties): exact p from the inversion counts when there are no ties. */
+export function kendallTest(x: Num[], y: Num[], options?: { alternative?: Alternative; method?: RankMethod; bits?: number }): TestResult & { S: number; n: number };
+/** P(Dₙ < d) exactly (Marsaglia, Tsang and Wang). */
+export function kolmogorovCdf(n: number, d: Num): Rational;
+/** P(Dₙ ≥ d): exact, or far in the tail the enclosure [P⁺, 2P⁺]. */
+export function kolmogorovTail(n: number, d: Num): Value;
+/** P(Dₙ⁺ ≥ d) exactly (Smirnov, Birnbaum and Tingey). */
+export function smirnovTail(n: number, d: Num): Rational;
+/** One sample against a Continuous or an exact cdf function; or two samples (exact by counting lattice paths). */
+export function ksTest(
+  x: Num[],
+  against: Num[] | Continuous | ((x: Rational) => Num),
+  options?: { alternative?: Alternative; exactUpTo?: number; resamples?: number; seed?: Seed; bits?: number },
+): TestResult & { method: string };
+export class Bootstrap {
+  readonly kind: "exact" | "simulated";
+  readonly method: "percentile" | "basic";
+  readonly statistic: string;
+  readonly n: number;
+  readonly estimate: Rational;
+  /** Exact: Rationals over the whole bootstrap distribution. Simulated: numbers. */
+  readonly mean: Rational | number;
+  readonly bias: Rational | number;
+  readonly se: Value | number;
+  readonly variance?: Rational;
+  readonly interval: { low: Rational; high: Rational; level: Rational };
+  readonly distinct?: bigint;
+  readonly distribution?: { value: Rational; probability: Rational }[];
+  readonly replicates?: Rational[];
+  readonly resamples?: number;
+  readonly seed?: Seed;
+  toString(): string;
+}
+/** The bootstrap: exact over every resample for small samples, otherwise simulated from a seed. */
+export function bootstrap(
+  data: Num[],
+  statistic?: "mean" | "median" | "variance" | ((values: Rational[]) => Num),
+  options?: { resamples?: number; seed?: Seed; level?: Num; method?: "percentile" | "basic"; exactUpTo?: number; bits?: number },
+): Bootstrap;
+
+// ---- Markov chains and conjugate updating (phase 7) -----------------------------
+
+export type State = string | number;
+export class MarkovChain {
+  readonly P: readonly (readonly Rational[])[];
+  readonly states: readonly State[];
+  readonly size: number;
+  p(from: State, to: State): Rational;
+  power(n: number): Rational[][];
+  distribution(start: State | Num[] | Record<string, Num>, n?: number): Record<string, Rational>;
+  classes(): { states: State[]; closed: boolean; recurrent: boolean; period: number | null }[];
+  isIrreducible(): boolean;
+  isErgodic(): boolean;
+  stationary(): { unique: boolean; distribution: Record<string, Rational> | null; all: Record<string, Rational>[] };
+  absorption(): { transient: State[]; targets: string[]; probabilities: Record<string, Record<string, Rational>>; steps: Record<string, Rational>; fundamental: Rational[][] };
+  hitting(targets: State | State[]): { probability: Record<string, Rational>; expected: Record<string, Rational | number> };
+  meanReturnTime(state: State): Rational | number;
+  simulate(start: State, steps: number, options?: { seed?: Seed }): State[];
+  toString(): string;
+}
+export function markovChain(matrix: Num[][] | Record<string, Record<string, Num>>, options?: { states?: State[] }): MarkovChain;
+
+export interface Belief {
+  readonly family: "beta" | "gamma" | "normal" | "dirichlet";
+  readonly params: Record<string, Rational>;
+  readonly history: unknown[];
+  readonly mean: Rational | Record<string, Rational>;
+  readonly variance: Rational | Record<string, Rational>;
+  readonly mode: Rational | Record<string, Rational> | null;
+  readonly distribution: Continuous;
+  interval(level?: Num, options?: { bits?: number }): { low: Value; high: Value; level: Rational };
+  cdf(x: Num, options?: { bits?: number }): Value;
+  toString(): string;
+}
+export interface CountLaw {
+  name: string;
+  min: number;
+  max: number | null;
+  pmf(k: number): Rational;
+  table?: Rational[];
+}
+export function betaPrior(a?: Num, b?: Num): Belief & {
+  update(data: { successes: number; failures?: number; trials?: number } | (0 | 1)[]): ReturnType<typeof betaPrior>;
+  predictive(m: number): CountLaw & { table: Rational[] };
+};
+export function gammaPrior(shape: Num, rate: Num, options?: { likelihood?: "poisson" | "exponential" }): Belief & {
+  likelihood: "poisson" | "exponential";
+  update(data: Num[]): ReturnType<typeof gammaPrior>;
+  predictive(): CountLaw;
+};
+export function normalPrior(mean: Num, options: { variance?: Num; sd?: Num; dataVariance?: Num; dataSd?: Num }): Belief & { update(data: Num[]): ReturnType<typeof normalPrior> };
+export function dirichletPrior(alpha: Num[] | Record<string, Num>): Belief & {
+  update(counts: number[] | Record<string, number>): ReturnType<typeof dirichletPrior>;
+  marginal(category: string | number): ReturnType<typeof betaPrior>;
+  predictive(): Record<string, Rational>;
+};

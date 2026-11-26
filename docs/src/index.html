@@ -53,6 +53,9 @@ String(estimatorStudy({ model: line, n: 50, truth: 0.5, runs: 2000, seed: 1,
 <h2>Inference and regression</h2>
 <p>The standard tests and intervals (z and t tests, chi-square and F tests, proportions, fitted distributions) keep their statistic exact where it can be: \(t^2\), \(X^2\) and \(F\) are fractions, and the p-value is a certified enclosure computed at that exact argument. Linear regression and analysis of variance solve the normal equations over the rationals, so coefficients, residuals, leverages and \(R^2\) are exact. The package's own tests then use seeded models to check that the intervals cover and the tests have their stated size; see <a href="testing-the-tests.html">Testing the tests</a>.</p>
 
+<h2>Ranks, chains and beliefs</h2>
+<p>The rank tests (sign, Wilcoxon, Mann–Whitney, Kruskal–Wallis, Spearman, Kendall) count their null distributions, ties included, so their p-values are exact fractions; Kolmogorov–Smirnov p-values are exact too, by matrix powers and by counting lattice paths. The bootstrap is exact for samples small enough to weigh every resample, and seeded otherwise. Markov chains get their stationary distributions, absorption probabilities and hitting times exactly, and conjugate Bayesian updating keeps posterior parameters, means and predictive probabilities as fractions. See <a href="rank-tests.html">Rank tests</a>, <a href="bootstrap.html">The bootstrap</a>, <a href="markov-chains.html">Markov chains</a> and <a href="bayesian-updating.html">Bayesian updating</a>.</p>
+
 <h2>What is planned</h2>
 <p>From the <a href="https://github.com/ratmath/ratmath/blob/main/docs/design/library-roadmap.md#6-a-probability-and-statistics-package-ratmathstats">library roadmap</a>. Sizes are rough estimates in lines of source.</p>
 <div class="tablewrap"><table class="plan">
@@ -62,8 +65,8 @@ String(estimatorStudy({ model: line, n: 50, truth: 0.5, runs: 2000, seed: 1,
 <tr><td>3</td><td>Seeded generation, models with noise and contamination, experiments</td><td>built</td></tr>
 <tr><td>4</td><td>Estimation, confidence intervals, the standard tests</td><td>built</td></tr>
 <tr><td>5</td><td>Regression and analysis of variance</td><td>built</td></tr>
-<tr><td>6</td><td>Rank tests, permutation tests, the bootstrap</td><td>700</td></tr>
-<tr><td>7</td><td>Markov chains; conjugate Bayesian updating</td><td>700</td></tr>
+<tr><td>6</td><td>Rank tests, permutation tests, the bootstrap</td><td>built</td></tr>
+<tr><td>7</td><td>Markov chains; conjugate Bayesian updating</td><td>built</td></tr>
 <tr><td>8</td><td>Graphics hooks</td><td>800 in graphics</td></tr>
 </table></div>
 <p>The library stands on Core (fractions and enclosures), analytic (the certified special functions) and discrete (counting and the seeded generator, which is exported again here as <code>rng</code>).</p>

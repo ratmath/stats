@@ -1,8 +1,8 @@
 // Shared page furniture for the stats docs: the contents column, the theme
 // switch and the code boxes. Add each topic page to PAGES as it is written.
 
-import * as A from "./stats.js?v=99d7635b4b";
-import { mountRunboxes } from "./runbox.js?v=99d7635b4b";
+import * as A from "./stats.js?v=0e32c28f5e";
+import { mountRunboxes } from "./runbox.js?v=0e32c28f5e";
 
 export { A };
 
@@ -31,6 +31,13 @@ export const PAGES = [
   { group: "Regression" },
   { href: "regression.html", title: "Linear regression", blurb: "Exact least squares, coefficient tests, prediction intervals, leverage, nested models" },
   { href: "anova.html", title: "Analysis of variance", blurb: "One-way ANOVA with exact sums of squares, as a regression, and two factors" },
+  { group: "Nonparametric" },
+  { href: "rank-tests.html", title: "Rank tests", blurb: "Sign, Wilcoxon, Mann–Whitney, Kruskal–Wallis, Spearman and Kendall, exact by counting" },
+  { href: "kolmogorov-smirnov.html", title: "Kolmogorov–Smirnov", blurb: "One and two samples, with exact p-values by matrix powers and lattice paths" },
+  { href: "bootstrap.html", title: "The bootstrap", blurb: "Exact over every resample for small samples, seeded otherwise" },
+  { group: "Chains and beliefs" },
+  { href: "markov-chains.html", title: "Markov chains", blurb: "Stationary distributions, classes, absorption and hitting times, exact" },
+  { href: "bayesian-updating.html", title: "Bayesian updating", blurb: "Conjugate priors: exact posteriors and predictions, certified credible intervals" },
 ];
 
 export const h = (tag, attrs = {}, ...kids) => {
