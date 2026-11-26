@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Discrete distributions · RatMath Stats</title>
+<meta name="description" content="The named discrete distributions in @ratmath/stats: binomial, geometric, negative binomial, hypergeometric and uniform exactly, and Poisson certified.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Exact</div>
+<h1>Discrete distributions</h1>
+<p class="lede">The named distributions on whole numbers. With rational parameters every probability of the binomial, geometric, negative binomial, hypergeometric and uniform distributions is a fraction. The Poisson distribution involves \(e^{-\lambda}\), so its probabilities are certified enclosures.</p>
+
+<h2>Using one</h2>
+<pre><code>import { binomial, hypergeometric, geometric, negativeBinomial, poisson, show } from "@ratmath/stats";
+
+const X = binomial(10, "1/3");
+X.pmf(4);              // 4480/19683     P(X = 4)
+X.cdf(4);              // 15488/19683    P(X ≤ 4)
+X.sf(4);               // 4195/19683     P(X &gt; 4)
+X.prob(2, 5);          // 1792/2187      P(2 ≤ X ≤ 5)
+X.quantile("0.9");     // 5              the least k with P(X ≤ k) ≥ 0.9
+X.mean;                // 10/3
+X.variance;            // 20/9
+show(X.sd(), 12);      // "1.490711985000"
+X.kind;                // "exact"</code></pre>
+<p>Parameters are read exactly: <code>"1/3"</code> is a third, and the JS number <code>0.1</code> is read by its decimal form as one tenth. <code>toFinite()</code> turns a distribution with finitely many values into a <a href="finite-probability.html">finite distribution</a>, and <code>sample(rng)</code> draws from a <a href="sampling.html">seeded generator</a>.</p>
+
+<h2>The family</h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Constructor</th><th>Counts</th><th>\(P(X = k)\)</th><th>Mean, variance</th></tr>
+<tr><td>bernoulli(p)</td><td>one trial</td><td>\(p^k (1-p)^{1-k}\)</td><td>\(p,\ p(1-p)\)</td></tr>
+<tr><td>binomial(n, p)</td><td>successes in \(n\) trials</td><td>\(\binom{n}{k} p^k (1-p)^{n-k}\)</td><td>\(np,\ np(1-p)\)</td></tr>
+<tr><td>geometric(p)</td><td>trials up to the first success</td><td>\((1-p)^{k-1} p\)</td><td>\(1/p,\ (1-p)/p^2\)</td></tr>
+<tr><td>negativeBinomial(r, p)</td><td>failures before the \(r\)th success</td><td>\(\binom{k+r-1}{k} p^r (1-p)^k\)</td><td>\(r(1-p)/p,\ r(1-p)/p^2\)</td></tr>
+<tr><td>hypergeometric(N, K, n)</td><td>marked items among \(n\) drawn from \(N\) with \(K\) marked</td><td>\(\binom{K}{k}\binom{N-K}{n-k} \big/ \binom{N}{n}\)</td><td>\(nK/N\), and the finite-population variance</td></tr>
+<tr><td>discreteUniform(a, b)</td><td>a whole number from \(a\) to \(b\)</td><td>\(1/(b-a+1)\)</td><td>\((a+b)/2,\ ((b-a+1)^2-1)/12\)</td></tr>
+<tr><td>poisson(λ)</td><td>events at rate \(\lambda\)</td><td>\(e^{-\lambda} \lambda^k / k!\)</td><td>\(\lambda,\ \lambda\)</td></tr>
+</table></div>
+<p><code>geometric(p, { failures: true })</code> counts failures before the first success instead, starting at 0.</p>
+
+<h2>Poisson is certified</h2>
+<pre><code>const N = poisson(3);
+N.kind;                          // "certified"
+show(N.pmf(2), 20);              // "0.22404180765538774341"
+show(N.cdf(5), 15);              // "0.916082057968697"
+N.quantile("0.99");              // 8: a whole number, decided for certain
+N.pmf(2, { bits: 200 });         // the same enclosure, about 60 digits wide</code></pre>
+<p>\(e^{-3}\) is irrational, so <code>pmf</code> returns a <code>RationalInterval</code> that contains the true value; <code>{ bits }</code> sets how narrow. A quantile is still an exact whole number: the library raises the precision until the cumulative sums are separated from the level.</p>
+<template data-runbox>
+// Cards: the chance of exactly two aces in a five-card hand, and of at least one.
+const aces = hypergeometric(52, 4, 5);
+PRINT("two aces:        ", String(aces.pmf(2)), "=", show(aces.pmf(2), 6));
+PRINT("at least one ace:", String(aces.sf(0)));
+
+// The Poisson limit: binomial(n, 3/n) approaches poisson(3). Watch P(X = 2) close in.
+const target = poisson(3).pmf(2);
+for (const n of [10, 100, 1000, 10000]) {
+  PRINT(`n = ${n}:`.padEnd(11), show(binomial(n, new Rational(3, n)).pmf(2), 10));
+}
+PRINT("poisson(3):", show(target, 10));
+
+// How many rolls until a six, with 90% certainty?
+geometric("1/6").quantile("0.9")
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

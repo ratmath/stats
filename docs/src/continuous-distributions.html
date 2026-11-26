@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Continuous distributions · RatMath Stats</title>
+<meta name="description" content="Continuous distributions in @ratmath/stats: normal, Student t, chi-square, F, gamma, beta and more, with certified densities, probabilities and quantiles.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Certified</div>
+<h1>Continuous distributions</h1>
+<p class="lede">The distributions behind the tables at the back of a statistics book, without the tables. A probability or a quantile is an enclosure: two rationals with the true value between them, as close together as you ask.</p>
+
+<h2>Using one</h2>
+<pre><code>import { normal, studentT, chiSquare, show } from "@ratmath/stats";
+
+const Z = normal();                       // mean 0, standard deviation 1
+show(Z.cdf("1.96"), 20);                  // "0.97500210485177956586"   P(Z ≤ 1.96)
+show(Z.sf(6), 15);                        // "0.000000000986588"        P(Z &gt; 6)
+show(Z.prob(-1, 1), 15);                  // "0.682689492137086"
+show(Z.pdf(0), 15);                       // "0.398942280401433"        1/√(2π)
+show(Z.quantile("0.975"), 18);            // "1.95996398454005424…"
+
+show(studentT(9).quantile("0.975"), 15);  // "2.262157162798206"
+show(chiSquare(4).sf("9.488"), 12);       // "0.049994405578"
+show(normal(100, 15).sf(130), 12);        // "0.022750131948"</code></pre>
+<p>Each method takes <code>{ bits }</code>: 96 for values and 64 for quantiles unless you say otherwise, and as many as you like.</p>
+<pre><code>show(Z.cdf("1.96", { bits: 160 }), 40);        // "0.9750021048517795658634157309591628099775"
+show(Z.quantile("0.975", { bits: 200 }), 50);  // "1.95996398454005423552459443052055152795555007786955"</code></pre>
+<p>Where an exact answer exists it is returned as a fraction: <code>uniform(0, 4).cdf(1)</code> is <code>1/4</code>, a mean such as <code>gamma(3, 2).mean</code> is <code>3/2</code>, and <code>studentT(9).variance</code> is <code>9/7</code>. A moment that does not exist is <code>null</code>: <code>cauchy().mean</code>.</p>
+
+<h2>The family</h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Constructor</th><th>Density on its support</th><th>Distribution function, through</th></tr>
+<tr><td>normal(μ, σ)</td><td>\(\frac{1}{\sigma\sqrt{2\pi}} e^{-(x-\mu)^2/2\sigma^2}\)</td><td>the error function</td></tr>
+<tr><td>lognormal(μ, σ)</td><td>\(\log X\) is normal</td><td>the error function of \(\log x\)</td></tr>
+<tr><td>gamma(shape, rate)</td><td>\(\frac{\beta^\alpha}{\Gamma(\alpha)} x^{\alpha-1} e^{-\beta x}\), \(x \gt 0\)</td><td>\(P(\alpha, \beta x)\), the incomplete gamma function</td></tr>
+<tr><td>chiSquare(k)</td><td>gamma with shape \(k/2\), rate \(1/2\)</td><td>\(P(k/2, x/2)\)</td></tr>
+<tr><td>exponential(rate)</td><td>\(\lambda e^{-\lambda x}\), \(x \gt 0\)</td><td>\(1 - e^{-\lambda x}\)</td></tr>
+<tr><td>weibull(shape, scale)</td><td>\(\frac{k}{s}(x/s)^{k-1} e^{-(x/s)^k}\), \(x \gt 0\)</td><td>\(1 - e^{-(x/s)^k}\)</td></tr>
+<tr><td>beta(a, b)</td><td>\(\frac{x^{a-1}(1-x)^{b-1}}{B(a,b)}\), \(0 \lt x \lt 1\)</td><td>\(I_x(a, b)\), the incomplete beta function</td></tr>
+<tr><td>studentT(df)</td><td>\(\propto (1 + t^2/\nu)^{-(\nu+1)/2}\)</td><td>\(I_x(\nu/2, 1/2)\) with \(x = \nu/(\nu + t^2)\)</td></tr>
+<tr><td>fDist(d1, d2)</td><td>ratio of two scaled chi-squares</td><td>\(I_x(d_1/2, d_2/2)\) with \(x = d_1 f/(d_1 f + d_2)\)</td></tr>
+<tr><td>uniform(a, b)</td><td>\(1/(b-a)\), \(a \lt x \lt b\)</td><td>exact</td></tr>
+<tr><td>cauchy(location, scale)</td><td>\(\frac{1}{\pi s (1 + ((x-x_0)/s)^2)}\)</td><td>the arctangent</td></tr>
+</table></div>
+<p>The incomplete gamma and beta functions are certified in the analytic library: a series of positive terms is added with every operation rounded outward, and the tail that is left off is bounded by a geometric series and added to the upper end.</p>
+
+<h2>Quantiles</h2>
+<p>A quantile is the \(x\) where the distribution function crosses a level \(p\). The library starts from a floating-point guess, brackets it between two rationals \(a \lt x \lt b\) with \(F(a) \lt p \lt F(b)\) both <em>certified</em>, and narrows the bracket with secant steps. Because every sign is certified, the result is an enclosure of the true quantile, whatever the guess was. See <a href="certified-answers.html">Certified answers</a>.</p>
+
+<h2>The fast side</h2>
+<pre><code>Z.fast.cdf(1.96);          // 0.9750021048517794
+Z.fast.quantile(0.975);    // 1.9599639845400538
+Z.fast.pdf(0);             // 0.3989422804014327</code></pre>
+<p>Every distribution has floating-point versions under <code>fast</code>, for plotting and for simulations. They are accurate to roughly twelve digits or better and make no promise beyond that; the certified methods are the ones to quote.</p>
+<template data-runbox>
+// The critical values a textbook prints, to more places than it prints them.
+PRINT("z, 95% two-sided:      ", show(normal().quantile("0.975"), 12));
+PRINT("t with 9 df:           ", show(studentT(9).quantile("0.975"), 12));
+PRINT("chi-square with 4 df:  ", show(chiSquare(4).quantile("0.95"), 12));
+PRINT("F with 3 and 20 df:    ", show(fDist(3, 20).quantile("0.95"), 12));
+
+// The 68, 95, 99.7 rule is a rounding. Here is what it rounds.
+for (const k of [1, 2, 3]) PRINT(`within ${k} sd:`, show(normal().prob(-k, k), 12));
+
+// Student's t approaches the normal: the 97.5% point as the degrees of freedom grow.
+for (const df of [2, 5, 30, 1000]) PRINT(`df ${df}:`.padEnd(9), show(studentT(df).quantile("0.975"), 8));
+
+// Fifty digits, because you can.
+show(normal().quantile("0.975", { bits: 200 }), 50)
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

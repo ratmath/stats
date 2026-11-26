@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seeded sampling · RatMath Stats</title>
+<meta property="og:title" content="Seeded sampling · RatMath Stats">
+<meta property="og:description" content="Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests and regression.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ratmath.com/stats/sampling.html">
+<meta name="description" content="Seeded random sampling in @ratmath/stats: the generator, independent streams by name, draws from every distribution, and exact rational draws.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://ratmath.com/assets/katex/0.19.1/katex.min.css">
+<link rel="stylesheet" href="assets/style.css?v=f9485bdd3e">
+<script type="module" src="assets/site.js?v=f9485bdd3e"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Simulated</div>
+<h1>Seeded sampling</h1>
+<p class="lede">Every random number in this library comes from a generator you seed. The same seed gives the same numbers on every machine, so a simulated result can be quoted with its seed and checked by anyone.</p>
+
+<h2>The generator</h2>
+<pre><code>import { rng, normal, binomial, die } from "@ratmath/stats";
+
+const r = rng(7);                        // a seed: a number or text
+normal().samples(3, r);                  // [-0.2867212522343773, 0.890397962977404, -0.6748667246228445]
+normal().samples(3, rng(7));             // the same three numbers
+binomial(10, "1/3").samples(8, rng(1));  // [4, 3, 2, 4, 4, 4, 5, 4]
+die().samples(8, rng(1));                // [5, 3, 1, 3, 1, 3, 3, 6]</code></pre>
+<p><code>rng</code> is the generator of the discrete library, exported again here. Its integer draws are exact (no modulo bias), and it has <code>int</code>, <code>bool(p)</code> with an exact probability, <code>pick</code>, <code>shuffle</code> and <code>sample</code>. Every distribution in this library has <code>sample(rng)</code> for one draw and <code>samples(n, rng)</code> for a list.</p>
+
+<h2>Streams with names</h2>
+<pre><code>const base = rng("my study");
+const a = base.fork("noise");            // an independent stream
+const b = base.fork("x values");         // another; neither disturbs the other or base</code></pre>
+<p><code>fork(label)</code> derives a new generator from the seed and the label without advancing the parent. This is how simulations stay comparable. If one generator fed everything in turn, drawing one extra number early on would change every number after it. With a stream for each purpose, changing the noise leaves the <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.4306em;"></span><span class="mord mathnormal">x</span></span></span></span> values alone. <a href="models.html">Models</a> use a stream for each part, and <a href="experiments.html">experiments</a> use a stream for each run, so run 17 is the same data whether you ask for 20 runs or 2,000.</p>
+
+<h2>How the draws are made</h2>
+<p>A continuous draw starts from a uniform number <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi></mrow><annotation encoding="application/x-tex">U</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.109em;">U</span></span></span></span> on <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0</mn><mo separator="true">,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(0, 1)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">1</span><span class="mclose">)</span></span></span></span> with 53 random bits. The normal distribution uses a pair of uniforms (the polar method), the gamma family uses Marsaglia and Tsang's method, and the rest push <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi></mrow><annotation encoding="application/x-tex">U</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.109em;">U</span></span></span></span> through the quantile function: if <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi></mrow><annotation encoding="application/x-tex">F</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">F</span></span></span></span> is the distribution function then <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>F</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mo stretchy="false">(</mo><mi>U</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">F^{-1}(U)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:1.0641em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.1389em;">F</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">1</span></span></span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.109em;">U</span><span class="mclose">)</span></span></span></span> has distribution <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi></mrow><annotation encoding="application/x-tex">F</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.1389em;">F</span></span></span></span>. Discrete draws walk the cumulative sums, or add up exact Bernoulli trials.</p>
+<p>These draws are floating-point numbers. That is the right tool for a simulation of a thousand runs, and it is why simulated results are labelled as such.</p>
+
+<h2>Exact draws</h2>
+<pre><code>normal().samplesExact(2, rng(7)).map(String);
+// ["-39406668679/137438953472", "-24665190495/68719476736"]</code></pre>
+<p><code>sampleExact(rng, { bits })</code> returns a fraction: a uniform fraction with <code>bits</code> random bits is pushed through the <a href="certified-answers.html">certified quantile</a>, and the result is rounded to a fraction within <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>2</mn><mrow><mo>−</mo><mtext>bits</mtext></mrow></msup></mrow><annotation encoding="application/x-tex">2^{-\text{bits}}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.8491em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8491em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord text mtight"><span class="mord mtight">bits</span></span></span></span></span></span></span></span></span></span></span></span></span> of it, relative to its size. It is much slower, and it gives data whose exact statistics (a mean as a fraction, an exact permutation test) are the same on every machine and in every language that implements the same rule.</p>
+<section class="runbox" aria-label="Runnable code">
+  <div class="runbox-head"><strong>Try it</strong><span>Edit the code and run it with <code>@ratmath/stats</code> and Core's <code>Rational</code> in scope. The last line's value is shown; <code>PRINT(…)</code> adds lines, <code>TEX(…)</code> typesets math.</span></div>
+  <textarea spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Code">// Same seed, same numbers. Different labels, unrelated numbers.
+PRINT("seed 7:      ", normal().samples(3, rng(7)).map((v) =&gt; v.toFixed(4)).join("  "));
+PRINT("seed 7 again:", normal().samples(3, rng(7)).map((v) =&gt; v.toFixed(4)).join("  "));
+PRINT("fork a:      ", normal().samples(3, rng(7).fork("a")).map((v) =&gt; v.toFixed(4)).join("  "));
+PRINT("fork b:      ", normal().samples(3, rng(7).fork("b")).map((v) =&gt; v.toFixed(4)).join("  "));
+
+// Do the draws look like the distribution? Compare sample quantiles with certified ones.
+const draws = gamma(3, 2).samples(20000, rng("check"));
+for (const p of [0.1, 0.5, 0.9]) {
+  PRINT(`${p * 100}% point: sample ${fast.quantile(draws, p).toFixed(4)}, true ${show(gamma(3, 2).quantile(p), 4)}`);
+}
+
+// Exact draws make exact statistics: the mean of five, as a fraction.
+String(mean(exponential(1).samplesExact(5, rng(2), { bits: 16 })))</textarea>
+  <div class="runbox-bar"><button type="button" data-run>Run</button><button type="button" class="ghost" data-reset>Reset</button><span class="runbox-meta">Ctrl/⌘ + Enter runs</span></div>
+  <div class="runbox-out" aria-live="polite"></div>
+</section>
+<footer class="sitelinks"><a href="https://github.com/ratmath/stats">GitHub</a> · <a href="https://ratmath.com/">ratmath.com</a> · <a href="https://ratmath.com/shelf/">shelf</a> · <a href="https://ratmath.com/core/">core</a></footer>
+</article>
+</main>
+</div>
+</body>
+</html>

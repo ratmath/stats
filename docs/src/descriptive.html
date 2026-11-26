@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Descriptive statistics · RatMath Stats</title>
+<meta name="description" content="Descriptive statistics in @ratmath/stats: exact means, variances, quantiles by nine named rules, histograms, correlation and least squares, with enclosures for interval data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Exact</div>
+<h1>Descriptive statistics</h1>
+<p class="lede">Summaries of a list of numbers, computed in fractions. Data typed as decimals are read as the decimals they are, so the mean of 0.1, 0.2 and 0.3 is exactly 1/5. Data given as intervals (a measurement with its uncertainty) give enclosures.</p>
+
+<h2>Centre and spread</h2>
+<pre><code>import { mean, variance, sd, median, quartiles, iqr, mad, trimmedMean, skewness, kurtosis, summary, show } from "@ratmath/stats";
+
+const data = [2, 4, 4, 4, 5, 5, 7, 9];
+mean(data);                              // 5
+variance(data);                          // 32/7   (divides by n − 1)
+variance(data, { population: true });    // 4      (divides by n)
+sd(data, { population: true });          // 2: exact, because 4 is a perfect square
+show(sd(data), 12);                      // "2.138089935299": certified otherwise
+median(data);                            // 9/2
+iqr(data);                               // 3/2
+mad(data);                               // 1/2: the median distance from the median
+trimmedMean(data, "1/8");                // 29/6: drop an eighth from each end
+mean([0.1, 0.2, 0.3]);                   // 1/5</code></pre>
+<p>The sample variance is \(s^2 = \frac{1}{n-1}\sum (x_i - \bar{x})^2\). Skewness is \(m_3 / m_2^{3/2}\) and kurtosis \(m_4 / m_2^2\) with \(m_k = \frac1n \sum (x_i - \bar x)^k\); kurtosis is a fraction, and skewness is exact when \(m_2\) is a perfect square. <code>summary(data)</code> collects the count, mean, five-number summary, variance, standard deviation, modes and the outliers beyond \(1.5\) interquartile ranges.</p>
+
+<h2>Quantiles have rules</h2>
+<p>There is no single definition of a sample quantile, and packages disagree. Here the rule has a name.</p>
+<pre><code>import { quantile } from "@ratmath/stats";
+
+quantile(data, "0.9");                         // 38/5   "linear": the usual default
+quantile(data, "0.9", { method: "hazen" });    // 42/5
+quantile(data, "0.9", { method: "lower" });    // 7: always one of the data values</code></pre>
+<div class="tablewrap"><table class="ref">
+<tr><th>method</th><th>Position among the sorted values \(x_1 \le \dots \le x_n\)</th></tr>
+<tr><td>linear</td><td>\(1 + (n-1)p\), interpolated. The default of most software.</td></tr>
+<tr><td>weibull</td><td>\((n+1)p\), interpolated</td></tr>
+<tr><td>hazen</td><td>\(np + \tfrac12\), interpolated</td></tr>
+<tr><td>median-unbiased</td><td>\((n + \tfrac13)p + \tfrac13\), interpolated</td></tr>
+<tr><td>inverse</td><td>the least value whose cumulative proportion reaches \(p\)</td></tr>
+<tr><td>lower, higher, nearest, midpoint</td><td>the linear position, moved to a data value below, above or nearest, or the midpoint of the two</td></tr>
+</table></div>
+
+<h2>Counts</h2>
+<pre><code>import { frequencies, modes, histogram } from "@ratmath/stats";
+
+frequencies(data);      // rows { value, count, proportion, cumulative }
+modes(data);            // [4]
+histogram(data, { width: 2, start: 2 });
+// rows { from, to, count, proportion, density } for [2, 4), [4, 6), [6, 8), [8, 10]</code></pre>
+
+<h2>Two variables</h2>
+<pre><code>import { covariance, correlation, leastSquares } from "@ratmath/stats";
+
+const x = [1, 2, 3, 4, 5];
+const y = [2, 4, 5, 4, 5];
+covariance(x, y);                    // 3/2
+show(correlation(x, y), 12);         // "0.774596669241"
+const fit = leastSquares(x, y);
+fit.slope;                           // 3/5
+fit.intercept;                       // 11/5
+fit.r2;                              // 3/5
+fit.predict(6);                      // 29/5
+fit.residuals.map(String);           // ["-4/5", "3/5", "1", "-3/5", "-1/5"]</code></pre>
+<p>The least-squares line minimises \(\sum (y_i - a - b x_i)^2\); its slope is \(b = s_{xy} / s_{xx}\) and it passes through \((\bar x, \bar y)\). In fractions the residuals add up to exactly zero, which is a check you can run. Regression with several predictors, and the inference that goes with it, is the planned phase 5.</p>
+
+<h2>Measurements with uncertainty</h2>
+<pre><code>String(mean(["1.2:1.4", "2.0:2.2", 3]));       // "31/15:11/5": every possible mean lies in here
+show(mean(["1.5[+-0.1]", "2.5[+-0.1]"]), 6);   // "2.0…"</code></pre>
+<p>An interval datum means "somewhere in here". Sums and means are enclosures of every value the statistic could take. Order statistics of overlapping intervals are not defined, so quantiles need exact data.</p>
+
+<h2>The fast side</h2>
+<p><code>fast.mean</code>, <code>fast.sd</code>, <code>fast.median</code>, <code>fast.quantile</code>, <code>fast.trimmedMean</code>, <code>fast.correlation</code>, <code>fast.leastSquares</code> and the rest do the same in floating point on plain numbers. They are for <a href="experiments.html">simulations</a>, where a statistic is computed thousands of times on random data and the last digit carries no meaning.</p>
+<template data-runbox>
+// Anscombe's first two data sets: the same summaries, exactly the same line.
+const x  = [10, 8, 13, 9, 11, 14, 6, 4, 12, 7, 5];
+const y1 = [8.04, 6.95, 7.58, 8.81, 8.33, 9.96, 7.24, 4.26, 10.84, 4.82, 5.68];
+const y2 = [9.14, 8.14, 8.74, 8.77, 9.26, 8.10, 6.13, 3.10, 9.13, 7.26, 4.74];
+
+for (const [name, y] of [["first", y1], ["second", y2]]) {
+  const fit = leastSquares(x, y);
+  PRINT(`${name}: mean ${show(mean(y), 4)}, variance ${show(variance(y), 4)}, line ${show(fit.intercept, 4)} + ${show(fit.slope, 4)}·x, r² ${show(fit.r2, 4)}`);
+}
+// To four places they agree. Exactly, they do not:
+PRINT("slopes:", String(leastSquares(x, y1).slope), "and", String(leastSquares(x, y2).slope));
+
+// The residuals of an exact fit add up to exactly zero.
+String(sum(leastSquares(x, y1).residuals))
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

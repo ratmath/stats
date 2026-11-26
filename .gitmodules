@@ -1,0 +1,6 @@
+[submodule "vendor/analytic"]
+	path = vendor/analytic
+	url = https://github.com/ratmath/analytic.git
+[submodule "vendor/discrete"]
+	path = vendor/discrete
+	url = https://github.com/ratmath/discrete.git

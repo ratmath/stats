@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Exact tests · RatMath Stats</title>
+<meta name="description" content="Exact tests in @ratmath/stats: the binomial test, Fisher&#x27;s exact test and permutation tests, with p-values as fractions, and intervals for a proportion.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Exact</div>
+<h1>Exact tests</h1>
+<p class="lede">Tests whose null distribution is finite, so the p-value is a fraction found by counting. No normal approximation, and no minimum sample size.</p>
+
+<h2>The binomial test</h2>
+<pre><code>import { binomialTest, proportionInterval, show } from "@ratmath/stats";
+
+const t = binomialTest(14, 20, "1/2");       // 14 successes in 20 trials; is p = 1/2?
+String(t);              // "exact binomial test: p = 0.115318 (exact, two-sided)"
+t.pValue;               // 15115/131072
+t.decision("0.05");     // "keep"
+t.reject("0.05");       // false
+binomialTest(14, 20, "1/2", { alternative: "greater" }).pValue;   // 15115/262144</code></pre>
+<p>Under \(H_0\) the count is binomial\((n, p_0)\). The one-sided p-values are tail sums. The two-sided p-value adds the probability of every count that is no more likely than the one observed,</p>
+\[ p = \sum_{k \,:\, P(k) \le P(k_{\text{obs}})} P(k), \]
+<p>which is exact for any \(p_0\), symmetric or not. Comparing fractions for "no more likely" is exact here; in floating point, ties are decided by rounding error.</p>
+
+<h2>An interval for a proportion</h2>
+<pre><code>const ci = proportionInterval(14, 20);       // Clopper and Pearson's interval, 95%
+show(ci.low, 6);        // "0.457211"
+show(ci.high, 6);       // "0.881068"
+proportionInterval(14, 20, { method: "wilson" });   // 0.481027 to 0.854523
+proportionInterval(14, 20, { method: "wald", level: "0.99" });   // 0.4361 to 0.9639</code></pre>
+<p>The "exact" interval is the set of \(p_0\) that the two one-sided binomial tests do not reject at \(\alpha/2\) each. Its ends are quantiles of beta distributions,</p>
+\[ \text{low} = B^{-1}\!\left(\tfrac{\alpha}{2};\, k,\, n-k+1\right), \qquad \text{high} = B^{-1}\!\left(1-\tfrac{\alpha}{2};\, k+1,\, n-k\right), \]
+<p>which are <a href="certified-answers.html">certified</a> and rounded outward, so the interval's coverage is never below its level. Wilson's interval and the textbook Wald interval \(\hat p \pm z\sqrt{\hat p(1-\hat p)/n}\) are offered for comparison; the <a href="experiments.html">experiments</a> page measures how often each contains the truth.</p>
+
+<h2>Fisher's exact test</h2>
+<pre><code>import { fisherTest } from "@ratmath/stats";
+
+const f = fisherTest([[3, 1], [1, 3]]);
+f.pValue;               // 17/35
+f.oddsRatio;            // 9
+fisherTest([[3, 1], [1, 3]], { alternative: "greater" }).pValue;   // 17/70</code></pre>
+<p>With the row and column totals of a 2 by 2 table held fixed, the top-left count is hypergeometric when the rows and columns are unrelated. The p-value adds up the tables that are no more likely than the one observed.</p>
+
+<h2>Permutation tests</h2>
+<pre><code>import { permutationTest } from "@ratmath/stats";
+
+const p = permutationTest([12, 15, 11, 18, 14], [9, 10, 13, 8, 11]);
+p.pValue;               // 1/21: of the 252 ways to deal ten values into two fives
+p.kind;                 // "exact"
+permutationTest([12, 15, 11, 18, 14], [9, 10, 13, 8, 11], { paired: true }).pValue;   // 1/8
+permutationTest(x, y, { statistic: "median" });</code></pre>
+<p>If two groups do not differ, every way of dealing the pooled values into groups of these sizes is equally likely. The p-value is the fraction of deals whose difference in means (or medians, or any statistic you pass) is at least as extreme as the one observed. With <code>{ paired: true }</code> the deals are the \(2^n\) ways of swapping within pairs.</p>
+<p>When there are more deals than <code>limit</code> (200,000 unless you say otherwise), the test draws <code>resamples</code> random deals from <code>seed</code> instead. Then the result's <code>kind</code> is <code>"simulated"</code>, and <code>pValueInterval</code> is an exact interval for the p-value it estimates. A result never changes kind silently.</p>
+<template data-runbox>
+// The lady tasting tea: eight cups, four with milk first. She names which four.
+// How many must she get right for the result to be convincing?
+for (let right = 2; right &lt;= 4; right++) {
+  const table = [[right, 4 - right], [4 - right, right]];
+  const t = fisherTest(table, { alternative: "greater" });
+  PRINT(`${right} of 4 right: p = ${t.pValue}`, `(${t.decision("0.05")})`);
+}
+
+// A permutation test small enough to count, then one that must be simulated.
+const small = permutationTest([12, 15, 11, 18, 14], [9, 10, 13, 8, 11]);
+PRINT(String(small), "from", String(small.arrangements), "deals");
+
+const a = Array.from({ length: 20 }, (_, i) =&gt; 2 + i * 1.1);
+const b = Array.from({ length: 20 }, (_, i) =&gt; i);
+const large = permutationTest(a, b, { seed: 3 });
+PRINT(String(large));
+PRINT("the p-value is between", show(large.pValueInterval.low, 4), "and", show(large.pValueInterval.high, 4));
+large.decision("0.05")
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

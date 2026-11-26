@@ -1,5 +1,21 @@
 // @ratmath/stats: probability and statistics for RatMath.
 //
-// The package is set up but nothing is built yet. `plan` lists what is coming.
+// Three kinds of answer, never mixed up:
+//   exact      rationals: finite probability, descriptive statistics, exact tests
+//   certified  enclosures: values of continuous distributions, to any precision
+//   simulated  results of seeded random experiments, with their sampling error
 
+export { StatsError, toQ, toValue, show, compare, sqrt, toNumber } from "./src/num.js";
+export { Finite, finite, die, dice, coin, deck, draw, bayes } from "./src/finite.js";
+export { Discrete, bernoulli, binomial, geometric, negativeBinomial, hypergeometric, discreteUniform, poisson } from "./src/discrete-dists.js";
+export {
+  count, sum, mean, weightedMean, variance, sd, moment, skewness, kurtosis, min, max, range,
+  quantile, median, quartiles, iqr, fiveNumber, mad, trimmedMean, frequencies, modes, histogram,
+  covariance, correlation, leastSquares, summary, fast,
+} from "./src/describe.js";
+export { Continuous, normal, lognormal, gamma, chiSquare, exponential, weibull, beta, studentT, fDist, uniform, cauchy } from "./src/continuous.js";
+export { TestResult, binomialTest, fisherTest, permutationTest, proportionInterval } from "./src/tests.js";
+export { Model, Dataset, model } from "./src/model.js";
+export { SimulatedRate, SimulatedEstimates, howOften, coverage, rejectionRate, powerCurve, estimatorStudy } from "./src/experiment.js";
+export { rng, Random } from "@ratmath/discrete";
 export { plan } from "./src/plan.js";

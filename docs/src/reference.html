@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Statistics Reference</title>
-<meta name="description" content="Every function of @ratmath/stats.">
+<title>Reference · RatMath Stats</title>
+<meta name="description" content="Every export of @ratmath/stats in one place: finite probability, distributions, descriptive statistics, exact tests, models and experiments.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
@@ -17,16 +17,122 @@
 <main>
 <article>
 <div class="eyebrow">Reference</div>
-<h1>Everything in the library</h1>
-<p class="lede">Every export of <code>@ratmath/stats</code> will be listed here with what it takes and what it returns.</p>
-<p class="notice"><strong>Planned, not built yet.</strong> This site is the frame the package will grow into. The full plan is in the <a href="https://github.com/ratmath/ratmath/blob/main/docs/design/library-roadmap.md#6-a-probability-and-statistics-package-ratmathstats">library roadmap</a>, and the <a href="https://ratmath.com/shelf/">RatMath Shelf</a> page lists what exists across all the libraries.</p>
-<div class="tablewrap"><table class="ref" id="ref">
+<h1>Reference</h1>
+<p class="lede">Every export, grouped by subject. Wherever a number is expected you may pass a <code>Rational</code>, a BigInt, text such as <code>"1/3"</code> or <code>"0.05"</code>, or a JS number, which is read by its decimal form (<code>0.1</code> is one tenth).</p>
+
+<h2>Kinds of answer</h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Kind</th><th>What you get</th></tr>
+<tr><td>exact</td><td>A <code>Rational</code>. Finite probability, discrete distributions with rational parameters, statistics of exact data, exact tests.</td></tr>
+<tr><td>certified</td><td>A <code>RationalInterval</code> that contains the true value; <code>{ bits }</code> sets its width. Continuous distributions, Poisson, square roots.</td></tr>
+<tr><td>simulated</td><td>An object with <code>kind: "simulated"</code>, its <code>seed</code>, and its sampling error.</td></tr>
+</table></div>
+<p>Arguments the library cannot work with are refused with a <code>StatsError</code> carrying a <code>code</code>, such as <code>bad-argument</code>, <code>domain</code>, <code>needs-exact</code>, <code>too-large</code>, <code>too-close</code> or <code>impossible-event</code>.</p>
+
+<h2>Numbers</h2>
+<div class="tablewrap"><table class="ref">
 <tr><th>Export</th><th>What it does</th></tr>
-<tr><td>plan</td><td>The list of planned phases, each { phase, contents, estimate }. It is here so the package has something to load while it is empty, and it shrinks as phases are built.</td></tr>
+<tr><td>toQ(v)</td><td>Any accepted number as a <code>Rational</code>.</td></tr>
+<tr><td>toValue(v)</td><td>A datum: a <code>Rational</code>, or a <code>RationalInterval</code> from <code>[low, high]</code>, <code>"1.2:1.4"</code> or <code>"1.5[+-0.1]"</code>.</td></tr>
+<tr><td>show(v, digits = 6)</td><td>Decimal text. For an enclosure, the digits both ends share, then <code>…</code>.</td></tr>
+<tr><td>compare(value, level)</td><td><code>"below"</code>, <code>"above"</code>, <code>"equal"</code> or <code>"too close to call"</code>.</td></tr>
+<tr><td>sqrt(v, bits = 96)</td><td>Exact for perfect squares, a certified enclosure otherwise.</td></tr>
+<tr><td>toNumber(v)</td><td>A JS number; the midpoint of an enclosure.</td></tr>
+<tr><td>StatsError</td><td>The error class, with <code>code</code>.</td></tr>
+</table></div>
+
+<h2><a href="finite-probability.html">Finite probability</a></h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Export</th><th>What it does</th></tr>
+<tr><td>finite(spec, weights?, { normalize })</td><td>A <code>Finite</code> from equally likely outcomes, outcomes with weights, an object or <code>Map</code>, or a family from the discrete library.</td></tr>
+<tr><td>die(sides = 6), dice(n, sides = 6), coin(p = 1/2)</td><td>A die; \(n\) dice as tuples; a coin showing <code>"H"</code> with probability \(p\).</td></tr>
+<tr><td>deck()</td><td>The 52 cards as text such as <code>"Q♥"</code>, for <code>draw</code>.</td></tr>
+<tr><td>draw(items, k, { replace, ordered })</td><td>Every way of drawing \(k\) of the items, equally likely.</td></tr>
+<tr><td>bayes(prior, likelihood)</td><td><code>{ posterior, evidence, table }</code>.</td></tr>
+<tr><td>Finite: p, prob, given</td><td><code>p(outcome)</code>; <code>prob(event, given?)</code>; <code>given(event)</code>, the conditional distribution.</td></tr>
+<tr><td>Finite: map, filter, product, power, plus, sumOf</td><td>The distribution of a function of the outcome; conditioning; independent pairs and tuples; the sum of two independent numbers, or of \(n\) copies.</td></tr>
+<tr><td>Finite: marginal, joint, independent</td><td>Coordinates of tuple outcomes; several functions at once; whether two events are independent, exactly.</td></tr>
+<tr><td>Finite: mean, expect, variance, sd, moment, covariance, correlation</td><td>Of the outcome or of functions of it.</td></tr>
+<tr><td>Finite: cdf, quantile, median, modes, support</td><td>For numeric outcomes.</td></tr>
+<tr><td>Finite: sample, samples, table, entries, outcomes, size</td><td>Seeded draws; rows <code>{ outcome, probability }</code>.</td></tr>
+</table></div>
+
+<h2><a href="discrete-distributions.html">Discrete distributions</a></h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Export</th><th>What it does</th></tr>
+<tr><td>bernoulli(p), binomial(n, p)</td><td>One trial; successes in \(n\) trials.</td></tr>
+<tr><td>geometric(p, { failures }), negativeBinomial(r, p)</td><td>Trials to the first success (or failures before it); failures before the \(r\)th success.</td></tr>
+<tr><td>hypergeometric(N, K, n), discreteUniform(a, b)</td><td>Marked items in a draw without replacement; a whole number from \(a\) to \(b\).</td></tr>
+<tr><td>poisson(lambda)</td><td>Certified; methods take <code>{ bits }</code>.</td></tr>
+<tr><td>Discrete</td><td><code>pmf(k)</code>, <code>cdf(k)</code>, <code>sf(k)</code>, <code>prob(a, b)</code> for \(P(a \le X \le b)\), <code>quantile(p)</code>, <code>median()</code>, <code>mean</code>, <code>variance</code>, <code>sd()</code>, <code>mode</code>, <code>min</code>, <code>max</code>, <code>kind</code>, <code>sample(rng)</code>, <code>samples(n, rng)</code>, <code>toFinite()</code>.</td></tr>
+</table></div>
+
+<h2><a href="descriptive.html">Descriptive statistics</a></h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Export</th><th>What it does</th></tr>
+<tr><td>count, sum, mean, weightedMean(data, weights)</td><td>Exact; enclosures for interval data.</td></tr>
+<tr><td>variance(data, { population }), sd, moment(data, k, { central })</td><td>Sample variance unless <code>population</code>.</td></tr>
+<tr><td>skewness, kurtosis(data, { excess })</td><td>\(m_3/m_2^{3/2}\) and \(m_4/m_2^2\).</td></tr>
+<tr><td>min, max, range, median, quartiles, iqr, fiveNumber</td><td>Order statistics; <code>quartiles</code> is <code>[q1, median, q3]</code>.</td></tr>
+<tr><td>quantile(data, p, { method })</td><td><code>linear</code>, <code>weibull</code>, <code>hazen</code>, <code>median-unbiased</code>, <code>inverse</code>, <code>lower</code>, <code>higher</code>, <code>nearest</code>, <code>midpoint</code>.</td></tr>
+<tr><td>mad, trimmedMean(data, fraction)</td><td>Median absolute deviation; the mean after dropping a fraction from each end.</td></tr>
+<tr><td>frequencies, modes, histogram(data, { edges | width, start | bins })</td><td>Counts by value and by class.</td></tr>
+<tr><td>covariance(x, y), correlation(x, y)</td><td>Sample covariance; Pearson's \(r\).</td></tr>
+<tr><td>leastSquares(x, y)</td><td><code>{ slope, intercept, r2, residuals, fitted, sse, sst, n, predict }</code>.</td></tr>
+<tr><td>summary(data)</td><td>The usual summaries in one object, with outliers and modes.</td></tr>
+<tr><td>fast</td><td>Floating-point <code>sum, mean, variance, sd, quantile, median, min, max, trimmedMean, covariance, correlation, leastSquares</code>.</td></tr>
+</table></div>
+
+<h2><a href="exact-tests.html">Exact tests</a></h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Export</th><th>What it does</th></tr>
+<tr><td>binomialTest(k, n, p0 = 1/2, { alternative })</td><td>A <code>TestResult</code> with <code>interval(options)</code>.</td></tr>
+<tr><td>fisherTest([[a, b], [c, d]], { alternative })</td><td>With <code>oddsRatio</code>.</td></tr>
+<tr><td>permutationTest(x, y, { statistic, alternative, paired, limit, resamples, seed })</td><td>Exact when the deals can be counted, otherwise simulated with <code>pValueInterval</code>.</td></tr>
+<tr><td>proportionInterval(k, n, { level, method, bits })</td><td><code>{ low, high, level, method, estimate }</code>; method <code>exact</code>, <code>wilson</code> or <code>wald</code>.</td></tr>
+<tr><td>TestResult</td><td><code>test</code>, <code>statistic</code>, <code>pValue</code>, <code>alternative</code>, <code>kind</code>, <code>decision(alpha)</code>, <code>reject(alpha)</code>. Alternatives are <code>"two-sided"</code>, <code>"greater"</code>, <code>"less"</code>.</td></tr>
+</table></div>
+
+<h2><a href="continuous-distributions.html">Continuous distributions</a></h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Export</th><th>What it does</th></tr>
+<tr><td>normal(mu = 0, sigma = 1), lognormal(mu, sigma)</td><td></td></tr>
+<tr><td>gamma(shape, rate = 1), chiSquare(k), exponential(rate = 1), weibull(shape, scale = 1)</td><td></td></tr>
+<tr><td>beta(a, b), studentT(df), fDist(d1, d2)</td><td></td></tr>
+<tr><td>uniform(a = 0, b = 1), cauchy(location = 0, scale = 1)</td><td></td></tr>
+<tr><td>Continuous</td><td><code>pdf(x)</code>, <code>cdf(x)</code>, <code>sf(x)</code>, <code>prob(a, b)</code>, <code>quantile(p)</code>, <code>median()</code>, each with <code>{ bits }</code>; <code>mean</code>, <code>variance</code>, <code>sd()</code> (<code>null</code> where undefined); <code>low</code>, <code>high</code> (the support; <code>null</code> for infinite); <code>fast.pdf</code>, <code>fast.cdf</code>, <code>fast.quantile</code>; <code>sample(rng)</code>, <code>samples(n, rng)</code>, <code>sampleExact(rng, { bits })</code>, <code>samplesExact(n, rng)</code>.</td></tr>
+</table></div>
+
+<h2><a href="sampling.html">Sampling</a>, <a href="models.html">models</a> and <a href="experiments.html">experiments</a></h2>
+<div class="tablewrap"><table class="ref">
+<tr><th>Export</th><th>What it does</th></tr>
+<tr><td>rng(seed), Random</td><td>The seeded generator of the discrete library: <code>fork(label)</code>, <code>int</code>, <code>bool</code>, <code>pick</code>, <code>shuffle</code>, <code>sample</code>.</td></tr>
+<tr><td>model(spec), Model</td><td>Parts <code>truth</code>, <code>x</code>, <code>noise</code>, <code>spread</code>, <code>contamination</code>, <code>xNoise</code>, <code>round</code>, <code>censor</code>, <code>missing</code>, <code>name</code>. Methods <code>with(changes)</code>, <code>truthAt(x)</code>, <code>sample(n, seed, { exact, bits })</code>.</td></tr>
+<tr><td>Dataset</td><td><code>x</code>, <code>y</code>, <code>trueX</code>, <code>trueY</code>, <code>contaminated</code>, <code>censored</code>, <code>missing</code>, <code>seed</code>, <code>model</code>, <code>kind</code>, <code>n</code>, <code>complete()</code>.</td></tr>
+<tr><td>howOften({ model, n | draw, event, runs, seed, level })</td><td>A <code>SimulatedRate</code>.</td></tr>
+<tr><td>coverage({ interval, truth, … })</td><td>How often <code>interval(data)</code> contains the truth; adds <code>meanWidth</code>.</td></tr>
+<tr><td>rejectionRate({ test, alpha, … })</td><td>How often <code>test(data)</code> rejects: size under the null, power otherwise.</td></tr>
+<tr><td>powerCurve({ effects, model | draw, test, … })</td><td>A rejection rate for each effect; <code>model</code> or <code>draw</code> is a function of the effect.</td></tr>
+<tr><td>estimatorStudy({ estimator, truth, … })</td><td>A <code>SimulatedEstimates</code>: <code>estimates</code>, <code>mean</code>, <code>sd</code>, <code>standardError</code>, <code>bias</code>, <code>rmse</code>.</td></tr>
+<tr><td>SimulatedRate</td><td><code>rate</code>, <code>hits</code>, <code>runs</code>, <code>seed</code>, <code>interval</code> <code>{ low, high, level }</code>, <code>compare(value)</code>.</td></tr>
+<tr><td>plan</td><td>The phases still to be built.</td></tr>
 </table></div>
 <template data-runbox>
-// The one export so far.
-for (const p of plan) PRINT(`phase ${p.phase}:`, p.contents, `(${p.estimate} lines)`);
+// Each kind of answer, and how to tell which one you have.
+const answers = {
+  "binomial(10, 1/3).cdf(4)":      binomial(10, "1/3").cdf(4),
+  "variance([1, 2, 4])":           variance([1, 2, 4]),
+  "sd([1, 2, 4])":                 sd([1, 2, 4]),
+  "normal().cdf(1)":               normal().cdf(1),
+  "uniform(0, 4).cdf(1)":          uniform(0, 4).cdf(1),
+  "poisson(2).pmf(0)":             poisson(2).pmf(0),
+};
+for (const [text, v] of Object.entries(answers)) {
+  const kind = v instanceof RationalInterval ? "certified" : "exact";
+  PRINT(text.padEnd(26), kind.padEnd(10), kind === "exact" ? String(v) : show(v, 15));
+}
+// What is still planned:
+for (const p of plan) PRINT(`phase ${p.phase}: ${p.contents}`);
 plan.length
 </template>
 </article>

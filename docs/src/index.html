@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>RatMath Statistics</title>
-<meta name="description" content="Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests and regression.">
+<title>RatMath Stats</title>
+<meta name="description" content="Probability and statistics for RatMath: exact finite probability and tests, certified distributions, and seeded data from a known model with noise to test what a procedure recovers.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
@@ -17,53 +17,67 @@
 <main>
 <article>
 <div class="eyebrow">@ratmath/stats</div>
-<h1>Probability and statistics that say how they know</h1>
-<p class="lede">Probability and statistics in one library. Every answer is labelled exact, certified or simulated, and data can be generated from a model you choose, disturbed with noise from another distribution, and handed to the tests and regressions to see whether they recover what was put in.</p>
-<p class="notice"><strong>Planned, not built yet.</strong> This site is the frame the package will grow into. The full plan is in the <a href="https://github.com/ratmath/ratmath/blob/main/docs/design/library-roadmap.md#6-a-probability-and-statistics-package-ratmathstats">library roadmap</a>, and the <a href="https://ratmath.com/shelf/">RatMath Shelf</a> page lists what exists across all the libraries.</p>
+<h1>Statistics that says what kind of answer it is giving</h1>
+<p class="lede">Probability and statistics in one library, with three kinds of answer that are never mixed up. An <strong>exact</strong> answer is a fraction. A <strong>certified</strong> answer is a pair of fractions with the true value between them, as narrow as you ask. A <strong>simulated</strong> answer comes from a seeded random experiment, and carries its seed and its own sampling error.</p>
 
-<h2>What it will cover</h2>
-<ul>
-  <li>Finite probability: events, conditional probability, Bayes, random variables, joint tables, all exact.</li>
-  <li>Discrete and continuous distributions with certified probabilities and quantiles.</li>
-  <li>Descriptive statistics and exact tests.</li>
-  <li>Seeded generation of data from a known model, with noise and contamination from other distributions, and experiments that repeat a procedure many times.</li>
-  <li>Estimation, confidence intervals and the standard tests.</li>
-  <li>Regression and analysis of variance.</li>
-  <li>Rank tests, permutation tests and the bootstrap.</li>
-  <li>Markov chains and conjugate Bayesian updating.</li>
-</ul>
+<h2>What is here</h2>
+<div class="cards" id="cards"></div>
 
-<h2>The order of work</h2>
-<p>The phases below come from the roadmap. Sizes are rough estimates in lines of source.</p>
+<h2>A first program</h2>
+<pre><code>import { dice, binomial, mean, variance, normal, show, binomialTest, model, estimatorStudy, fast } from "@ratmath/stats";
+
+// exact: fractions
+dice(2).prob(([a, b]) =&gt; a + b === 7);        // 1/6
+binomial(10, "1/3").cdf(4);                   // 15488/19683
+variance([2, 4, 4, 4, 5, 5, 7, 9]);           // 32/7
+binomialTest(14, 20, "1/2").pValue;           // 15115/131072
+
+// certified: enclosures, to any precision
+show(normal().quantile("0.975"), 18);                 // "1.95996398454005424…"
+show(normal().cdf("1.96", { bits: 160 }), 40);        // "0.9750021048517795658634157309591628099775"
+
+// simulated: a known truth, disturbed, and a procedure judged against it
+const line = model({ truth: [2, 0.5], x: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], noise: normal(0, 1) });
+String(estimatorStudy({ model: line, n: 50, truth: 0.5, runs: 2000, seed: 1,
+  estimator: (data) =&gt; fast.leastSquares(data.x, data.y).slope }));
+// "mean 0.49993, sd 0.049765, bias -0.000066071 ± 0.0021811, rmse 0.049753 (simulated: 2000 runs, seed 1)"</code></pre>
+
+<h2>Three kinds of answer</h2>
+<p><strong>Exact.</strong> Finite probability, the discrete distributions with rational parameters, descriptive statistics of exact data, and the exact tests all work in fractions. \(P(\text{two dice sum to } 7)\) is \(1/6\), and the variance of a list of decimals is the fraction it is. Nothing is rounded, so two exact answers can be compared with <code>equals</code>.</p>
+<p><strong>Certified.</strong> The normal distribution function has no closed form, so its values are enclosures: two rationals with the true value between them. Ask for more bits and the enclosure narrows. A comparison of a certified p-value with a level answers "below", "above" or <code>"too close to call"</code>; it never guesses. See <a href="certified-answers.html">Certified answers</a>.</p>
+<p><strong>Simulated.</strong> Anything found by drawing random numbers says so: its <code>kind</code> is <code>"simulated"</code>, it carries the seed that reproduces it, and a simulated rate comes with the exact binomial interval for the rate it estimates. See <a href="experiments.html">Experiments</a>.</p>
+
+<h2>Data from a truth you chose</h2>
+<p>The part of this library that most packages lack: say what the truth is, say how observations depart from it (noise, unequal spread, contamination, error in \(x\), rounding, censoring, missing values), draw data, and see whether a test or a regression recovers what you put in. Changing one departure leaves the random numbers of the others alone, so two versions of a model can be compared on the same data. See <a href="models.html">Models with noise</a>.</p>
+
+<h2>What is planned</h2>
+<p>From the <a href="https://github.com/ratmath/ratmath/blob/main/docs/design/library-roadmap.md#6-a-probability-and-statistics-package-ratmathstats">library roadmap</a>. Sizes are rough estimates in lines of source.</p>
 <div class="tablewrap"><table class="plan">
 <tr><th>Phase</th><th>Contents</th><th>Estimate</th></tr>
-<tr><td>1</td><td>Finite probability, discrete distributions, descriptive statistics, exact tests</td><td>1,100</td></tr>
-<tr><td>2</td><td>Continuous distributions, certified</td><td>1,200, plus 500 in analytic</td></tr>
-<tr><td>3</td><td>Seeded generation, models with noise and contamination, experiments</td><td>1,300</td></tr>
+<tr><td>1</td><td>Finite probability, discrete distributions, descriptive statistics, exact tests</td><td>built</td></tr>
+<tr><td>2</td><td>Continuous distributions, certified</td><td>built</td></tr>
+<tr><td>3</td><td>Seeded generation, models with noise and contamination, experiments</td><td>built</td></tr>
 <tr><td>4</td><td>Estimation, confidence intervals, the standard tests</td><td>1,000</td></tr>
 <tr><td>5</td><td>Regression and analysis of variance</td><td>1,100</td></tr>
 <tr><td>6</td><td>Rank tests, permutation tests, the bootstrap</td><td>700</td></tr>
 <tr><td>7</td><td>Markov chains; conjugate Bayesian updating</td><td>700</td></tr>
 <tr><td>8</td><td>Graphics hooks</td><td>800 in graphics</td></tr>
 </table></div>
-<p>It will build on: Core, analytic (the distribution functions), linalg (regression) and discrete (counting and the seeded generator).</p>
-
-<h2>How the docs will be laid out</h2>
-<p>Like every library on the Shelf: this overview, an <a href="explore.html">Explore</a> page for trying things without writing code, a <a href="reference.html">Reference</a> listing every function, and one page per topic that explains the usage and the mathematics. Every page ends with a box of code you can edit and run.</p>
-<div class="cards" id="cards"></div>
-
-<h2>Until then</h2>
-<p>The box below already runs, with <code>@ratmath/core</code> in scope. It shows the kind of exactness the package is built on, done by hand.</p>
+<p>The library stands on Core (fractions and enclosures), analytic (the certified special functions) and discrete (counting and the seeded generator, which is exported again here as <code>rng</code>).</p>
 <template data-runbox>
-// Finite probability is exact arithmetic on fractions.
-// The distribution of the sum of two dice:
-const dist = new Map();
-for (let a = 1; a &lt;= 6; a += 1) for (let b = 1; b &lt;= 6; b += 1) dist.set(a + b, (dist.get(a + b) ?? new Rational(0)).add(new Rational(1, 36)));
-for (const [s, p] of dist) PRINT(`P(sum = ${s}) =`, p.toString());
-let mean = new Rational(0), second = new Rational(0);
-for (const [s, p] of dist) { mean = mean.add(p.multiply(new Rational(s))); second = second.add(p.multiply(new Rational(s * s))); }
-PRINT("mean =", mean.toString(), "  variance =", second.subtract(mean.pow(2)).toString());
-plan.map((p) =&gt; `${p.phase}. ${p.contents}`)
+// One question, three kinds of answer.
+// How likely are 11 or more heads in 16 tosses of a fair coin?
+const X = binomial(16, "1/2");
+PRINT("exact:     ", String(X.sf(10)), "=", show(X.sf(10), 6));
+
+// The same from the normal curve with a continuity correction: certified, and an approximation.
+const approx = normal(8, 2).sf("10.5");      // mean 8, standard deviation 2
+PRINT("certified: ", show(approx, 12), "(the normal curve's answer, to 12 places)");
+
+// And by tossing coins: simulated, with its own error bars.
+const sim = howOften({ draw: (rng) =&gt; X.sample(rng), event: (k) =&gt; k &gt;= 11, runs: 4000, seed: 1 });
+PRINT("simulated: ", String(sim));
+sim.compare(X.sf(10))   // is the exact answer inside the simulation's interval?
 </template>
 </article>
 </main>

@@ -1,6 +1,6 @@
 {
   "name": "@ratmath/stats",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests and regression",
   "type": "module",
   "main": "index.js",
@@ -43,7 +43,9 @@
     "url": "https://github.com/ratmath/stats/issues"
   },
   "dependencies": {
-    "@ratmath/core": "^0.10.0"
+    "@ratmath/core": "^0.10.0",
+    "@ratmath/analytic": "^0.1.0",
+    "@ratmath/discrete": "^0.1.0"
   },
   "devDependencies": {
     "katex": "0.19.1"
@@ -55,5 +57,9 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "workspaces": [
+    "vendor/analytic",
+    "vendor/discrete"
+  ]
 }

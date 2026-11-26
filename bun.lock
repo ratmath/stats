@@ -5,6 +5,28 @@
     "": {
       "name": "@ratmath/stats",
       "dependencies": {
+        "@ratmath/analytic": "^0.1.0",
+        "@ratmath/core": "^0.10.0",
+        "@ratmath/discrete": "^0.1.0",
+      },
+      "devDependencies": {
+        "katex": "0.19.1",
+      },
+    },
+    "vendor/analytic": {
+      "name": "@ratmath/analytic",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ratmath/core": "^0.10.0",
+      },
+      "devDependencies": {
+        "katex": "0.19.1",
+      },
+    },
+    "vendor/discrete": {
+      "name": "@ratmath/discrete",
+      "version": "0.1.0",
+      "dependencies": {
         "@ratmath/core": "^0.10.0",
       },
       "devDependencies": {
@@ -13,7 +35,11 @@
     },
   },
   "packages": {
+    "@ratmath/analytic": ["@ratmath/analytic@workspace:vendor/analytic"],
+
     "@ratmath/core": ["@ratmath/core@0.10.0", "", {}, "sha512-+lw3Eclhc9aDc2QPGpPpf6cgE4IqifgCXgunjaM/XKgDMJzL6YF/rPB8pBOgUd7krM+mzz8XSXKhL8kpdgOQsw=="],
+
+    "@ratmath/discrete": ["@ratmath/discrete@workspace:vendor/discrete"],
 
     "commander": ["commander@15.1.0", "", {}, "sha512-cgnQ88TRrWcC7pVq46RzJVRMktu3W2RcbnoidnfBsl1bmDCBwJS/udcIZpKoCrbAYYaCqsz1yZCVIgbIaU3ddQ=="],
 
