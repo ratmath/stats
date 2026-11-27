@@ -197,8 +197,21 @@ export class Continuous {
   sampleExact(rng: Random, options?: Bits): Rational;
   samplesExact(n: number, rng: Random, options?: Bits): Rational[];
   readonly fast: { pdf(x: number): number; cdf(x: number): number; quantile(p: number): number };
+  /** Set on distributions built by fromDensity: the normalizing factor (or 1) and how f ≥ 0 and the mass were established. */
+  readonly constant?: Rational;
+  readonly checks?: { nonnegative: string; mass: "exact" | "enclosure" };
+  /** The pieces of a density built by fromDensity, transform or orderStatistic. */
+  readonly pieces?: Array<{ from: Rational | null; to: Rational | null; density: string }>;
+  /** The distribution of g(X), for g proven monotone on the support. */
+  transform(g: string, options?: { variable?: string }): Continuous;
+  /** The k-th smallest of n independent draws. */
+  orderStatistic(k: number, n: number): Continuous;
   toString(): string;
 }
+export type DensityPiece = [string, [Num | "inf" | "-inf", Num | "inf" | "-inf"]];
+export function fromDensity(f: string | DensityPiece[], support?: [Num | "inf" | "-inf", Num | "inf" | "-inf"], options?: { normalize?: boolean; variable?: string }): Continuous;
+export function transform(dist: Continuous, g: string, options?: { variable?: string }): Continuous;
+export function orderStatistic(dist: Continuous, k: number, n: number): Continuous;
 export function normal(mu?: Num, sigma?: Num): Continuous;
 export function lognormal(mu?: Num, sigma?: Num): Continuous;
 export function gamma(shape: Num, rate?: Num): Continuous;

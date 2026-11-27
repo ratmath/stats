@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="https://ratmath.com/assets/katex/0.19.1/katex.min.css">
-<link rel="stylesheet" href="assets/style.css?v=aeec1751d1">
-<script type="module" src="assets/site.js?v=aeec1751d1"></script>
+<link rel="stylesheet" href="assets/style.css?v=5712587af2">
+<script type="module" src="assets/site.js?v=5712587af2"></script>
 </head>
 <body>
 <div class="shell">
@@ -105,6 +105,9 @@
 <tr><td>gamma(shape, rate = 1), chiSquare(k), exponential(rate = 1), weibull(shape, scale = 1)</td><td></td></tr>
 <tr><td>beta(a, b), studentT(df), fDist(d1, d2)</td><td></td></tr>
 <tr><td>uniform(a = 0, b = 1), cauchy(location = 0, scale = 1)</td><td></td></tr>
+<tr><td><a href="densities.html">fromDensity(f, support, { normalize, variable })</a></td><td>A Continuous distribution from a density formula, or a list <code>[[formula, [a, b]], ...]</code> of pieces. Proves f ≥ 0 and mass 1 (exactly for polynomial pieces) or refuses; <code>{ normalize: true }</code> divides by the mass and reports it as <code>constant</code>. <code>checks</code> says how each fact was established.</td></tr>
+<tr><td>transform(dist, g), dist.transform(g)</td><td>The distribution of g(X) for g proven monotone on the support. Exact moments when X has polynomial pieces and g is a polynomial.</td></tr>
+<tr><td>orderStatistic(dist, k, n), dist.orderStatistic(k, n)</td><td>The k-th smallest of n draws. Exact piecewise polynomial for uniform or polynomial densities (the maximum of n uniforms is Beta(n, 1)).</td></tr>
 <tr><td>Continuous</td><td><code>pdf(x)</code>, <code>cdf(x)</code>, <code>sf(x)</code>, <code>prob(a, b)</code>, <code>quantile(p)</code>, <code>median()</code>, each with <code>{ bits }</code>; <code>mean</code>, <code>variance</code>, <code>sd()</code> (<code>null</code> where undefined); <code>low</code>, <code>high</code> (the support; <code>null</code> for infinite); <code>fast.pdf</code>, <code>fast.cdf</code>, <code>fast.quantile</code>; <code>sample(rng)</code>, <code>samples(n, rng)</code>, <code>sampleExact(rng, { bits })</code>, <code>samplesExact(n, rng)</code>.</td></tr>
 </table></div>
 

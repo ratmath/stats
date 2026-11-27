@@ -1,8 +1,8 @@
 // Shared page furniture for the stats docs: the contents column, the theme
 // switch and the code boxes. Add each topic page to PAGES as it is written.
 
-import * as A from "./stats.js?v=aeec1751d1";
-import { mountRunboxes } from "./runbox.js?v=aeec1751d1";
+import * as A from "./stats.js?v=5712587af2";
+import { mountRunboxes } from "./runbox.js?v=5712587af2";
 
 export { A };
 
@@ -17,6 +17,7 @@ export const PAGES = [
   { href: "exact-tests.html", title: "Exact tests", blurb: "Binomial, Fisher and permutation tests with p-values as fractions" },
   { group: "Certified" },
   { href: "continuous-distributions.html", title: "Continuous distributions", blurb: "Normal, t, chi-square, F, gamma, beta: enclosures to any precision" },
+  { href: "densities.html", title: "Your own densities", blurb: "A distribution from a formula, functions of a random variable, order statistics" },
   { href: "certified-answers.html", title: "Certified answers", blurb: "Reading enclosures, and comparisons that can be too close to call" },
   { group: "Simulated" },
   { href: "sampling.html", title: "Seeded sampling", blurb: "A seeded generator, named streams, exact rational draws" },

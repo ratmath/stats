@@ -1,6 +1,6 @@
 # @ratmath/stats 0.3.0: full documentation
 
-> Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. From https://ratmath.com/stats/, commit 3cec172. Each page ends with a runnable example; in it, PRINT(...) prints.
+> Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. From https://ratmath.com/stats/, commit 8f6b41e. Each page ends with a runnable example; in it, PRINT(...) prints.
 
 
 ---
@@ -230,6 +230,12 @@ Arguments the library cannot work with are refused with a `StatsError` carrying 
 | beta(a, b), studentT(df), fDist(d1, d2) | |
 
 | uniform(a = 0, b = 1), cauchy(location = 0, scale = 1) | |
+
+| fromDensity(f, support, { normalize, variable }) | A Continuous distribution from a density formula, or a list [[formula, [a, b]], ...] of pieces. Proves f ≥ 0 and mass 1 (exactly for polynomial pieces) or refuses; { normalize: true } divides by the mass and reports it as constant. checks says how each fact was established. |
+
+| transform(dist, g), dist.transform(g) | The distribution of g(X) for g proven monotone on the support. Exact moments when X has polynomial pieces and g is a polynomial. |
+
+| orderStatistic(dist, k, n), dist.orderStatistic(k, n) | The k-th smallest of n draws. Exact piecewise polynomial for uniform or polynomial densities (the maximum of n uniforms is Beta(n, 1)). |
 
 | Continuous | pdf(x), cdf(x), sf(x), prob(a, b), quantile(p), median(), each with { bits }; mean, variance, sd() (null where undefined); low, high (the support; null for infinite); fast.pdf, fast.cdf, fast.quantile; sample(rng), samples(n, rng), sampleExact(rng, { bits }), samplesExact(n, rng). |
 
@@ -906,6 +912,89 @@ for (const df of [2, 5, 30, 1000]) PRINT(`df ${df}:`.padEnd(9), show(studentT(df
 
 // Fifty digits, because you can.
 show(normal().quantile("0.975", { bits: 200 }), 50)
+```
+
+---
+
+Page: https://ratmath.com/stats/densities.html
+
+Certified
+
+## Your own densities
+
+Probability courses hand out densities like f(x)=cx2 on [0,2] and ask for c, the mean and the variance; then they ask for the distribution of X2, or of the largest of three draws. `fromDensity`, `transform` and `orderStatistic` answer those questions, exactly whenever the density is a polynomial on each piece.
+
+### A density from a formula
+
+A function f is a density on its support when f≥0 there and ∫f=1. `fromDensity` proves both before it builds anything. For a polynomial piece the sign is decided between its isolated real roots and the mass comes from the antiderivative, so both facts are exact. For any other formula, f≥0 is shown by interval evaluation on ever smaller pieces and the mass by analytic's certified integral, which must enclose 1. With `{ normalize: true }` the formula is divided by its mass, reported as `constant`.
+
+```js
+import { fromDensity, show } from "@ratmath/stats";
+
+const X = fromDensity("x^2", [0, 2], { normalize: true });
+X.constant;   // 3/8: ∫₀² x² dx = 8/3
+X.mean;       // 3/2 = ∫ x · (3/8)x² dx
+X.variance;   // 3/20
+X.cdf(1);     // 1/8 = (1/2)³
+fromDensity("x", [0, 2]);   // refused: the total mass is 2, not 1
+```
+
+A list of pieces gives a piecewise density. Each piece is `[formula, [a, b]]`, in order and meeting end to end. The triangle on [0,2], the sum of two uniforms, is
+
+```js
+const T = fromDensity([["x", [0, 1]], ["2 - x", [1, 2]]]);
+T.mean;        // 1
+T.variance;    // 1/6 = 1/12 + 1/12
+fromDensity("exp(-x)", [0, "inf"]).cdf(1);   // ≈ 0.632121 = 1 − 1/e
+```
+
+`checks` records how f≥0 and the mass were established, so a reader can see which facts are exact and which rest on an enclosure.
+
+### A function of a random variable
+
+For g increasing on the support, P(g(X)≤y)=P(X≤g−1(y)), and the density is f(g−1(y))/∣g′(g−1(y))∣. Decreasing g flips the inequality. `transform` proves g monotone from the sign of g′ over the whole support (and refuses otherwise), encloses g−1(y) by bisection, and keeps the mean and variance exact when X has polynomial pieces and g is a polynomial.
+
+```js
+import { uniform } from "@ratmath/stats";
+
+const Y = uniform(0, 1).transform("x^2");
+Y.cdf("1/4");   // ≈ 1/2: P(X² ≤ 1/4) = P(X ≤ 1/2)
+Y.pdf("1/4");   // ≈ 1 = 1/(2·√(1/4))
+Y.mean;         // 1/3 = E[X²]
+uniform(-1, 1).transform("x^2");   // refused: not monotone on [−1, 1]
+```
+
+In this version g′ must have an enclosure on the whole support, so x​ works on [1,4] but is refused on [0,4], where its derivative is unbounded; on an unbounded support only affine g is accepted, with mean aμ+b and variance a2σ2.
+
+### Order statistics
+
+The k-th smallest of n independent draws, X(k)​, has P(X(k)​≤x)=∑j≥k​(jn​)F(x)j(1−F(x))n−j and density (k−1)!(n−k)!n!​Fk−1(1−F)n−kf. For a uniform or polynomial density these are polynomials again, so the result has exact moments. The maximum of n uniforms on [0,1] has density nxn−1, which is Beta(n, 1).
+
+```js
+const M = uniform(0, 1).orderStatistic(3, 3);   // the largest of three
+M.mean;         // 3/4 = n/(n+1)
+M.variance;     // 3/80
+M.pdf("1/2");   // 3/4 = 3 · (1/2)²
+```
+
+### Try it
+
+```js
+// c for f(x) = c(4 − x²) on [0, 2], then its mean and median
+const X = fromDensity("4 - x^2", [0, 2], { normalize: true });
+PRINT("c =", String(X.constant), " mean =", String(X.mean), " variance =", String(X.variance));
+PRINT("median ≈", show(X.median(), 6), " checks:", JSON.stringify(X.checks));
+// The largest of five uniforms against Beta(5, 1), and a seeded simulation
+const M = uniform(0, 1).orderStatistic(5, 5);
+PRINT("E[max of 5] =", String(M.mean), " Beta(5,1) mean:", show(beta(5, 1).mean, 6));
+const r = rng(11);
+let total = 0;
+for (let k = 0; k < 2000; k++) total += Math.max(...uniform(0, 1).samples(5, r));
+PRINT("simulated mean of the max:", (total / 2000).toFixed(4));
+// Y = √X for X uniform on [1, 4]
+const Y = uniform(1, 4).transform("sqrt(x)");
+PRINT("P(√X ≤ 3/2) ≈", show(Y.cdf("3/2"), 6), " (exactly 5/12)");
+X.pieces
 ```
 
 ---
