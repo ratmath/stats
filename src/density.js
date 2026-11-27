@@ -356,6 +356,14 @@ export function transform(dist, g, options = {}) {
     const target = sign > 0 ? y : y.negate();
     // affine: exact
     if (dConst !== null) return y.subtract(gAtAffine(ast, x)).divide(dConst);
+    // a simple rational with g(r) = y exactly (x² = 1/4 at 1/2), else bisection
+    const r = simpleNear(fInv(y.toNumber()));
+    if (r && (dist.low === null || r.compareTo(dist.low) >= 0) && (dist.high === null || r.compareTo(dist.high) <= 0)) {
+      try {
+        const v = encloseAst(ast, { [x]: ivOf(r) }, 64);
+        if (v.isPoint && v.lo.equals(y)) return r;
+      } catch {}
+    }
     return crossing(G, target, { guess: fInv(y.toNumber()), lo: dist.low, hi: dist.high, bits });
   };
   const fInv = (yv) => {
@@ -417,6 +425,24 @@ export function transform(dist, g, options = {}) {
     _fcdf: fcdf,
     _draw: (rng) => gf(dist.sample(rng)),
   });
+}
+/** the continued-fraction convergent of t with denominator at most 10⁶ that is within 1e-9, or null */
+function simpleNear(t) {
+  if (!Number.isFinite(t)) return null;
+  let [h0, h1, k0, k1] = [0n, 1n, 1n, 0n];
+  let v = t;
+  for (let i = 0; i < 40; i++) {
+    const a = Math.floor(v);
+    const A = BigInt(a);
+    [h0, h1] = [h1, A * h1 + h0];
+    [k0, k1] = [k1, A * k1 + k0];
+    if (k1 > 1000000n) return null;
+    if (Math.abs(Number(h1) / Number(k1) - t) < 1e-9) return new Rational(h1, k1);
+    const f = v - a;
+    if (f < 1e-12) return new Rational(h1, k1);
+    v = 1 / f;
+  }
+  return null;
 }
 function gAtAffine(ast, x) {
   return encloseAst(ast, { [x]: ivOf(ZERO) }, 64).lo;

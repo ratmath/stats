@@ -61,8 +61,9 @@ describe("fromDensity", () => {
 describe("transform", () => {
   test("X² for X uniform on [0, 1]", () => {
     const Y = uniform(0, 1).transform("x^2");
-    near(Y.cdf("1/4"), 0.5, 1e-12);
-    near(Y.pdf("1/4"), 1, 1e-9);
+    eq(Y.cdf("1/4"), "1/2");   // g⁻¹(1/4) = 1/2 found exactly
+    eq(Y.pdf("1/4"), "1");     // 1/(2·√(1/4))
+    near(Y.cdf("1/3"), Math.sqrt(1 / 3), 1e-9);
     eq(Y.mean, "1/3");
     eq(Y.variance, "4/45");
   });
