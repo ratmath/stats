@@ -31,6 +31,7 @@ import { varianceInterval, varianceTest, fTest, proportionTest, show } from "@ra
 varianceInterval(drug1);          // σ² between 1.5142… and 10.6670…; estimate 3.200556; sd from 1.2305 to 3.2660
 varianceTest(drug1, 4).statistic; // 5761/800 = (n − 1)s²/σ0², exactly
 String(varianceTest(drug1, 4));   // "chi-square test for a variance: p = 0.767649 (certified, two-sided)"</code></pre>
+<p>With only a summary, pass <code>{ n, variance }</code> or <code>{ n, sd }</code>: <code>varianceInterval({ n: 10, variance: 4 })</code> is \((36/19.023, 36/2.7004) \approx (1.8925, 13.331)\).</p>
 <p>The two-sided p-value of an asymmetric statistic is twice the smaller tail, capped at 1.</p>
 
 <h2>Two variances</h2>

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- `fromDensity(f, support, { normalize })`: a continuous distribution from a
+  density formula or a list of pieces, proven nonnegative with mass 1 (exactly
+  for polynomial pieces, which keep the CDF and moments exact).
+- `transform(dist, g)` / `dist.transform(g)`: the distribution of g(X) for g
+  proven monotone on the support.
+- `orderStatistic(dist, k, n)` / `dist.orderStatistic(k, n)`: the k-th smallest
+  of n draws, exact for uniform and polynomial densities.
+- Docs: a "Your own densities" page. Course Test batch A10 (ratmath/shelf#10).
+- `meanInterval` and `varianceInterval` take a summary in place of data:
+  `{ n, mean, sd }`, `{ n, mean, variance }`, `{ n, variance }`, `{ n, sd }`.
+- `power({ test: "z" | "proportion", ... })`: closed-form power as an
+  enclosure (the proportion test by the normal approximation).
+- `sampleSize(...)`: the smallest whole n proven to meet a margin of error
+  (proportion or mean) or a target power.
+- Docs: a "Power and sample size" page.
 - Quartiles the school way: `quartiles`, `iqr`, `fiveNumber` and `quantile`
   take `{ method: "halves" }` (medians of the lower and upper halves, the
   median left out when n is odd, as in most textbooks and the TI-84) and

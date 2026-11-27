@@ -55,6 +55,8 @@ tTest(drug2, drug1, { equalVariance: true });  // pooled: p = 0.079187, df = 18<
 meanInterval(drug1, { level: "0.99" });     // wider
 meanInterval(drug1, { alternative: "greater" });   // { low: …, high: null }: one-sided
 zTest([102, 98, 110, 105, 95, 108, 101, 99], { mu: 100, sigma: 5 });   // σ known: p = 0.203092</code></pre>
+<p>Textbook problems often give only a summary. <code>meanInterval</code> takes <code>{ n, mean, sd }</code> (or <code>variance</code>) in place of the data, with the sample standard deviation (divisor \(n - 1\)); with <code>sigma</code> it is the z interval. For power and sample sizes see <a href="power.html">Power and sample size</a>.</p>
+<pre><code>meanInterval({ n: 16, mean: "25.3", sd: "4.2" });   // t interval: 23.0620 to 27.5380 (t* = 2.1314, SE = 1.05)</code></pre>
 <template data-runbox>
 // Student's sleep data (1908): extra hours of sleep for ten patients on two drugs
 const drug1 = [0.7, -1.6, -0.2, -1.2, -0.1, 3.4, 3.7, 0.8, 0.0, 2.0];
@@ -66,6 +68,9 @@ PRINT("95% interval for the mean difference:", show(ci.low, 4), "to", show(ci.hi
 PRINT(String(tTest(drug2, drug1)), " df =", show(tTest(drug2, drug1).df, 4));
 // the interval is where the test keeps: just outside it, the test rejects
 PRINT(tTest(drug2, drug1, { paired: true, mu: ci.high.add(new Rational(1, 1000)) }).decision("0.05"));
+// from a summary only: n = 16, x̄ = 25.3, s = 4.2
+const fromSummary = meanInterval({ n: 16, mean: "25.3", sd: "4.2" });
+PRINT("summary interval:", show(fromSummary.low, 4), "to", show(fromSummary.high, 4));
 tTest(drug2, drug1, { paired: true, alternative: "greater" }).pValue
 </template>
 </article>

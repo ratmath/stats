@@ -19,6 +19,8 @@ export { Model, Dataset, model } from "./src/model.js";
 export {
   zTest, tTest, meanInterval, varianceInterval, varianceTest, fTest, proportionTest, chiSquareTest, correlationTest, fit,
 } from "./src/inference.js";
+export { power, sampleSize } from "./src/power.js";
+export { fromDensity, transform, orderStatistic } from "./src/density.js";
 export { LinearModel, linearModel, polyFit, dummies, compareModels, anova } from "./src/regression.js";
 export { SimulatedRate, SimulatedEstimates, howOften, coverage, rejectionRate, powerCurve, estimatorStudy } from "./src/experiment.js";
 export {

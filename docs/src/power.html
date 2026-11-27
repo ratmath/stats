@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Power and sample size · RatMath Stats</title>
+<meta name="description" content="Closed-form power of the z test and the one-proportion test, and the smallest sample size for a margin of error or a target power, in @ratmath/stats, with certified normal quantiles.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script type="module" src="assets/site.js"></script>
+</head>
+<body>
+<div class="shell">
+<aside></aside>
+<main>
+<article>
+<div class="eyebrow">Inference</div>
+<h1>Power and sample size</h1>
+<p class="lede">Before collecting data: how likely is the test to detect an effect of a given size, and how many observations does it need? For the z test and the one-proportion test the textbook answers are formulas in normal quantiles. Here the quantiles are certified, so the power is an interval certain to contain it, and a sample size is the smallest whole number proven to meet the target.</p>
+<h2>Power of the z test</h2>
+<p>Test \(H_0: \mu = \mu_0\) with known \(\sigma\) and \(n\) observations. Under the alternative \(\mu\) the statistic \(Z = (\bar x - \mu_0)\sqrt n/\sigma\) is normal with mean \(\delta = (\mu - \mu_0)\sqrt n/\sigma\) and variance 1, so for \(H_1: \mu &gt; \mu_0\)</p>
+\[ \text{power} = P(Z &gt; z_{1-\alpha}) = 1 - \Phi(z_{1-\alpha} - \delta), \]
+<p>and for a two-sided test \(\Phi(-z_{1-\alpha/2} + \delta) + \Phi(-z_{1-\alpha/2} - \delta)\), both tails counted. <code>power</code> returns that number as an enclosure.</p>
+<pre><code>import { power, sampleSize, show } from "@ratmath/stats";
+
+const p = power({ mu0: 100, mu: 106, sigma: 15, n: 25, alternative: "greater" });
+show(p.power);     // "0.638760": reject when x̄ &gt; 104.935, and P(Z &gt; −0.355) ≈ 0.6388
+power({ test: "proportion", p0: "0.5", p: "0.6", n: 100, alternative: "greater" }).power;   // ≈ 0.6415</code></pre>
+<p>The one-proportion version uses the normal approximation, as textbooks do: the cut-offs come from the standard error under \(p_0\), the spread of \(\hat p\) from the one under \(p\). For other tests, where no closed form is standard, <a href="experiments.html"><code>powerCurve</code></a> estimates power by simulation.</p>
+
+<h2>Sample size for a margin of error</h2>
+<p>A 95% interval for a proportion has half-width \(z\sqrt{p(1-p)/n}\), so a margin of at most \(m\) needs \(n \ge z^2 p(1-p)/m^2\), with \(p = \tfrac12\) when nothing is known (the largest \(p(1-p)\)). For a mean with known \(\sigma\), \(n \ge (z\sigma/m)^2\). The bound is enclosed and rounded up only once its enclosure lies within one whole step, so the answer is never off by one.</p>
+<pre><code>sampleSize({ margin: "0.03" }).n;             // 1068: (1.96/0.03)²·¼ = 1067.1
+sampleSize({ margin: 2, sigma: 10 }).n;       // 97: (1.96·10/2)² = 96.04</code></pre>
+
+<h2>Sample size for a target power</h2>
+<p>With <code>power</code> given, <code>sampleSize</code> finds the smallest \(n\) whose power is proven to reach it: the power grows with \(n\), so it doubles \(n\) until the target is met and then bisects. For a one-sided z test this agrees with the formula \(n \ge \big((z_{1-\alpha} + z_{1-\beta})\sigma/\delta\big)^2\); for a two-sided test it also counts the far tail, which the formula ignores.</p>
+<pre><code>sampleSize({ power: "0.8", mu0: 100, mu: 106, sigma: 15, alternative: "greater" }).n;   // 39
+sampleSize({ power: "0.9", mu0: 0, mu: "0.5", sigma: 1 }).n;                          // 43</code></pre>
+<template data-runbox>
+// Power of the one-sided z test as the true mean moves away from 100
+for (const mu of [101, 103, 106, 109, 112]) {
+  PRINT(`μ = ${mu}:`, show(power({ mu0: 100, mu, sigma: 15, n: 25, alternative: "greater" }).power, 4));
+}
+// The sample size that gives 80% power, and its power
+const s = sampleSize({ power: "0.8", mu0: 100, mu: 106, sigma: 15, alternative: "greater" });
+PRINT("n =", s.n, " power", show(s.power, 4), " (one fewer:", show(power({ mu0: 100, mu: 106, sigma: 15, n: s.n - 1, alternative: "greater" }).power, 4) + ")");
+// Check by simulation: how often does the z test reject with n = 39?
+const r = rng(7);
+let reject = 0;
+for (let k = 0; k &lt; 200; k++) {
+  const xs = normal(106, 15).samples(s.n, r).map((x) =&gt; x.toFixed(2));
+  if (toNumber(zTest(xs, { mu: 100, sigma: 15, alternative: "greater" }).pValue) &lt; 0.05) reject++;
+}
+PRINT("simulated power with n = 39:", reject / 200);
+sampleSize({ margin: "0.03" })
+</template>
+</article>
+</main>
+</div>
+</body>
+</html>

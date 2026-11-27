@@ -100,6 +100,9 @@
 <tr><td>gamma(shape, rate = 1), chiSquare(k), exponential(rate = 1), weibull(shape, scale = 1)</td><td></td></tr>
 <tr><td>beta(a, b), studentT(df), fDist(d1, d2)</td><td></td></tr>
 <tr><td>uniform(a = 0, b = 1), cauchy(location = 0, scale = 1)</td><td></td></tr>
+<tr><td><a href="densities.html">fromDensity(f, support, { normalize, variable })</a></td><td>A Continuous distribution from a density formula, or a list <code>[[formula, [a, b]], ...]</code> of pieces. Proves f ≥ 0 and mass 1 (exactly for polynomial pieces) or refuses; <code>{ normalize: true }</code> divides by the mass and reports it as <code>constant</code>. <code>checks</code> says how each fact was established.</td></tr>
+<tr><td>transform(dist, g), dist.transform(g)</td><td>The distribution of g(X) for g proven monotone on the support. Exact moments when X has polynomial pieces and g is a polynomial.</td></tr>
+<tr><td>orderStatistic(dist, k, n), dist.orderStatistic(k, n)</td><td>The k-th smallest of n draws. Exact piecewise polynomial for uniform or polynomial densities (the maximum of n uniforms is Beta(n, 1)).</td></tr>
 <tr><td>Continuous</td><td><code>pdf(x)</code>, <code>cdf(x)</code>, <code>sf(x)</code>, <code>prob(a, b)</code>, <code>quantile(p)</code>, <code>median()</code>, each with <code>{ bits }</code>; <code>mean</code>, <code>variance</code>, <code>sd()</code> (<code>null</code> where undefined); <code>low</code>, <code>high</code> (the support; <code>null</code> for infinite); <code>fast.pdf</code>, <code>fast.cdf</code>, <code>fast.quantile</code>; <code>sample(rng)</code>, <code>samples(n, rng)</code>, <code>sampleExact(rng, { bits })</code>, <code>samplesExact(n, rng)</code>.</td></tr>
 </table></div>
 
@@ -108,8 +111,10 @@
 <tr><th>Export</th><th>What it does</th></tr>
 <tr><td>zTest(data, { sigma, mu, alternative, bits })</td><td>z test for a mean with known \(\sigma\).</td></tr>
 <tr><td>tTest(x, [y], { mu, paired, equalVariance, alternative, bits })</td><td>One-sample, paired, Welch (default) or pooled t test.</td></tr>
-<tr><td>meanInterval(data, { level, sigma, alternative, bits })</td><td>t (or z) interval for a mean.</td></tr>
-<tr><td>varianceInterval(data, { level, bits })</td><td>Chi-square interval for \(\sigma^2\); <code>.sd</code> holds the interval for \(\sigma\).</td></tr>
+<tr><td>meanInterval(data, { level, sigma, alternative, bits })</td><td>t (or z) interval for a mean. <code>data</code> may be a summary <code>{ n, mean, sd }</code> or <code>{ n, mean, variance }</code>.</td></tr>
+<tr><td>varianceInterval(data, { level, bits })</td><td>Chi-square interval for \(\sigma^2\); <code>.sd</code> holds the interval for \(\sigma\). <code>data</code> may be <code>{ n, variance }</code> or <code>{ n, sd }</code>.</td></tr>
+<tr><td>power({ test: "z" | "proportion", mu0, mu, sigma | p0, p, n, alpha, alternative })</td><td>Closed-form power as an enclosure (the proportion test by the normal approximation).</td></tr>
+<tr><td>sampleSize({ margin, p | sigma, level }) or ({ power, … as power })</td><td><code>{ n }</code>: the smallest whole n proven to meet the margin or the power.</td></tr>
 <tr><td>varianceTest(data, v0), fTest(x, y, { ratio })</td><td>Chi-square test of one variance; F test of a ratio of two.</td></tr>
 <tr><td>proportionTest(k, n, p0, { correct }), proportionTest([k1, k2], [n1, n2])</td><td>z test for one or two proportions, with Wilson or Wald intervals.</td></tr>
 <tr><td>chiSquareTest(observed | table, { p, expected, estimated, correct })</td><td>Goodness of fit, or independence in a contingency table (Yates' correction on 2×2 when asked).</td></tr>

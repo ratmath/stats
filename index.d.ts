@@ -197,8 +197,21 @@ export class Continuous {
   sampleExact(rng: Random, options?: Bits): Rational;
   samplesExact(n: number, rng: Random, options?: Bits): Rational[];
   readonly fast: { pdf(x: number): number; cdf(x: number): number; quantile(p: number): number };
+  /** Set on distributions built by fromDensity: the normalizing factor (or 1) and how f ≥ 0 and the mass were established. */
+  readonly constant?: Rational;
+  readonly checks?: { nonnegative: string; mass: "exact" | "enclosure" };
+  /** The pieces of a density built by fromDensity, transform or orderStatistic. */
+  readonly pieces?: Array<{ from: Rational | null; to: Rational | null; density: string }>;
+  /** The distribution of g(X), for g proven monotone on the support. */
+  transform(g: string, options?: { variable?: string }): Continuous;
+  /** The k-th smallest of n independent draws. */
+  orderStatistic(k: number, n: number): Continuous;
   toString(): string;
 }
+export type DensityPiece = [string, [Num | "inf" | "-inf", Num | "inf" | "-inf"]];
+export function fromDensity(f: string | DensityPiece[], support?: [Num | "inf" | "-inf", Num | "inf" | "-inf"], options?: { normalize?: boolean; variable?: string }): Continuous;
+export function transform(dist: Continuous, g: string, options?: { variable?: string }): Continuous;
+export function orderStatistic(dist: Continuous, k: number, n: number): Continuous;
 export function normal(mu?: Num, sigma?: Num): Continuous;
 export function lognormal(mu?: Num, sigma?: Num): Continuous;
 export function gamma(shape: Num, rate?: Num): Continuous;
@@ -252,8 +265,21 @@ export interface TTestResult extends TestResult {
 export function zTest(data: Num[], options: { sigma: Num; mu?: Num; alternative?: Alternative; bits?: number }): TTestResult;
 export function tTest(x: Num[], options?: { mu?: Num; alternative?: Alternative; bits?: number }): TTestResult;
 export function tTest(x: Num[], y: Num[], options?: { mu?: Num; paired?: boolean; equalVariance?: boolean; alternative?: Alternative; bits?: number }): TTestResult;
-export function meanInterval(data: Num[], options?: { level?: Num; sigma?: Num; alternative?: Alternative; bits?: number }): Interval;
-export function varianceInterval(data: Num[], options?: { level?: Num; bits?: number }): Interval & { sd: { low: Rational; high: Rational } };
+/** A summary in place of data: the sample size, mean and sample sd (or variance, divisor n − 1). */
+export interface SampleSummary { n: number | bigint | Num; mean?: Num; sd?: Num; variance?: Num }
+export function meanInterval(data: Num[] | SampleSummary, options?: { level?: Num; sigma?: Num; alternative?: Alternative; bits?: number }): Interval;
+export function varianceInterval(data: Num[] | SampleSummary, options?: { level?: Num; bits?: number }): Interval & { sd: { low: Rational; high: Rational } };
+
+export interface PowerSpec {
+  test?: "z" | "proportion";
+  mu0?: Num; mu?: Num; sigma?: Num;
+  p0?: Num; p?: Num;
+  alpha?: Num; alternative?: Alternative; bits?: number;
+}
+/** Closed-form power of the z test or the one-proportion z test (normal approximation). */
+export function power(spec: PowerSpec & { n: number }): { power: Rational | RationalInterval; test: "z" | "proportion"; n: number; alpha: Rational; alternative: Alternative; kind: string; note?: string };
+/** The smallest whole n proven to give the margin of error, or (with power) to reach the target power. */
+export function sampleSize(spec: { margin: Num; p?: Num; sigma?: Num; level?: Num } | (PowerSpec & { power: Num })): { n: number; [key: string]: unknown };
 export function varianceTest(data: Num[], variance0: Num, options?: { alternative?: Alternative; bits?: number }): TestResult & { statistic: Rational; df: number };
 export function fTest(x: Num[], y: Num[], options?: { ratio?: Num; alternative?: Alternative; bits?: number }): TestResult & { statistic: Rational; df: [number, number]; interval(options?: { level?: Num }): Interval };
 export function proportionTest(successes: number, trials: number, p0?: Num, options?: { alternative?: Alternative; correct?: boolean; bits?: number }): TTestResult;

@@ -183,11 +183,47 @@ function oneSample(name, xs, m0, alt, bits, extra = {}) {
   return tResult(name, m, m0, s2.divide(Q(n)), Q(n - 1), alt, bits, { n, variance: s2, ...extra });
 }
 
+// ---- summaries ---------------------------------------------------------------------------
+
+/** A summary such as { n, mean, sd } rather than data: a plain object with n and the named field. */
+function isSummary(data, field) {
+  return data !== null && typeof data === "object" && !Array.isArray(data) && typeof data[Symbol.iterator] !== "function" &&
+    typeof data.values !== "function" && "n" in data && field in data;
+}
+/** n, the mean and s² from { n, mean, sd } or { n, mean, variance }; sd and variance are the sample (n − 1) ones. */
+function readSummary(data, { needMean, needSpread }) {
+  const n = whole(data.n, "n", { min: 1 });
+  const out = { n: Number(n) };
+  if (needMean) out.mean = toQ(data.mean, "the mean");
+  if ("sd" in data && "variance" in data) refuse("bad-argument", "give sd or variance, not both");
+  if ("sd" in data) {
+    const s = toQ(data.sd, "sd");
+    if (s.numerator < 0n) refuse("bad-argument", "sd must not be negative");
+    out.s2 = s.multiply(s);
+  } else if ("variance" in data) {
+    out.s2 = toQ(data.variance, "the variance");
+    if (out.s2.numerator < 0n) refuse("bad-argument", "the variance must not be negative");
+  } else if (needSpread) refuse("bad-argument", "a summary needs sd or variance (or pass sigma for a z interval)");
+  return out;
+}
+
 /**
  * A confidence interval for a mean: t when σ is unknown, z when it is given.
  * { low, high, level, estimate, method }; one-sided with { alternative }.
+ * `data` may be a summary instead: { n, mean, sd } or { n, mean, variance }
+ * (the sample sd, divisor n − 1), as textbook problems give it.
  */
 export function meanInterval(data, { level = "0.95", sigma, alternative = "two-sided", bits = 64 } = {}) {
+  if (isSummary(data, "mean")) {
+    const { n, mean, s2 } = readSummary(data, { needMean: true, needSpread: sigma === undefined });
+    if (sigma !== undefined) {
+      const s = toQ(sigma, "σ");
+      if (s.numerator <= 0n) refuse("bad-argument", "σ must be positive");
+      return centredInterval(mean, s.multiply(s).divide(Q(n)), normal(0, 1), { level, alternative, bits, method: "z" });
+    }
+    if (n < 2) refuse("no-data", "a t interval needs n of at least 2");
+    return centredInterval(mean, s2.divide(Q(n)), studentT(n - 1), { level, alternative, bits, method: "t" });
+  }
   const xs = exactValues(data);
   const n = xs.length;
   const m = meanOf(xs);
@@ -205,14 +241,23 @@ export function meanInterval(data, { level = "0.95", sigma, alternative = "two-s
 /**
  * The chi-square interval for a variance from normal data:
  * ((n − 1)s²/χ²(1 − α/2), (n − 1)s²/χ²(α/2)). Also `sd`, the interval for σ.
+ * `data` may be a summary instead: { n, variance } or { n, sd }.
  */
 export function varianceInterval(data, { level = "0.95", bits = 64 } = {}) {
-  const xs = exactValues(data);
-  const n = xs.length;
-  if (n < 2) refuse("no-data", "the variance needs at least two values");
+  let n, ss;
+  if (isSummary(data, "variance") || isSummary(data, "sd")) {
+    const r = readSummary(data, { needMean: false, needSpread: true });
+    n = r.n;
+    if (n < 2) refuse("no-data", "the variance needs n of at least 2");
+    ss = r.s2.multiply(Q(n - 1));
+  } else {
+    const xs = exactValues(data);
+    n = xs.length;
+    if (n < 2) refuse("no-data", "the variance needs at least two values");
+    ss = sumSquares(xs);
+  }
   const conf = levelOf(level);
   const tail = ONE.subtract(conf).divide(TWO);
-  const ss = sumSquares(xs);
   const d = chiSquare(n - 1);
   const upper = d.quantile(ONE.subtract(tail), { bits });
   const lower = d.quantile(tail, { bits });
