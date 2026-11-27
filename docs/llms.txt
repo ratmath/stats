@@ -1,0 +1,156 @@
+# @ratmath/stats
+
+> Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. Part of the RatMath Shelf; numbers come from @ratmath/core (a peer dependency). ESM: `import * as stats from "@ratmath/stats"`.
+
+Built from 0.3.0, commit 6f486af. `file:line` is relative to the package root (also node_modules/@ratmath/stats/); on GitHub: https://github.com/ratmath/stats/blob/6f486af/<file>#L<line>. Docs pages are under https://ratmath.com/stats/. Full types: index.d.ts.
+
+Types: `type Num = Rational | number | bigint | string`; `type Value = Rational | RationalInterval`; `type Datum = Num | RationalInterval | [Num, Num]`; `type Seed = number | string | bigint`; `type Alternative = "two-sided" | "greater" | "less"`; `type Event<T> = ((outcome: T) => boolean) | Set<T> | T`; `type QuantileMethod = "linear" | "weibull" | "hazen" | "median-unbiased" | "inverse" | "lower" | "higher" | "nearest" | "midpoint"`; `type Family = "normal" | "exponential" | "poisson" | "bernoulli" | "binomial" | "geometric" | "uniform" | "gamma" | "beta" | "lognormal"`; `type Predictors = Num[] | Num[][] | Record<string, Num[]>`; `type Source = Continuous | Discrete | Finite<any> | ((rng: Random) => Num) | Num`; `type DataSource<D> = { model: Model; n: number } | { draw: (rng: Random, run: number) => D }`; `type RankMethod = "auto" | "exact" | "normal"`; `type State = string | number`
+
+## Docs
+
+- https://ratmath.com/stats/llms-full.txt: every page below as Markdown, each with a runnable example
+- Pages: index (Overview), reference (Reference), explore (Explore), finite-probability (Finite probability), discrete-distributions (Discrete distributions), descriptive (Descriptive statistics), exact-tests (Exact tests), continuous-distributions (Continuous distributions), certified-answers (Certified answers), sampling (Seeded sampling), models (Models with noise), experiments (Experiments), means (Tests for means), variances-proportions (Variances and proportions), chi-square (Chi-square tests), estimation (Fitting distributions), testing-the-tests (Testing the tests), regression (Linear regression), anova (Analysis of variance), rank-tests (Rank tests), kolmogorov-smirnov (Kolmogorov–Smirnov), bootstrap (The bootstrap), markov-chains (Markov chains), bayesian-updating (Bayesian updating)
+
+## API
+
+name(params) → result — meaning · file:line · docs page
+
+- `StatsError class: code` · src/num.js:7 · reference
+- `toQ(v: Num | RationalInterval, what?: string) → Rational` — Read an exact rational: a Rational, BigInt, JS number (by its decimal form) or text such as "1/3" or "0.25". · src/num.js:42
+- `toValue(v: Datum, what?: string) → Value` — Read a data value: an exact rational, or an interval for a measurement with stated uncertainty (a RationalInterval, a pair [low, high], or Core's notations… · src/num.js:75
+- `show(v: Value | number, digits?: number) → string` — A value as decimal text. · src/num.js:166 · finite-probability
+- `compare(value: Value, level: Num) → "below" | "above" | "equal" | "too close to call"` — Is the value known to be below, above, or not separable from the level? · src/num.js:180 · certified-answers
+- `sqrt(v: Datum, bits?: number) → Value` — √q: the exact rational when q is a perfect square, otherwise a certified enclosure. · src/num.js:132
+- `toNumber(v: Value | number) → number` — The midpoint of a value as a JS number. · src/num.js:147 · certified-answers
+- `Finite class: entries, size, outcomes, support, p, prob, given, filter, map` · src/finite.js:40 · reference
+- `finite(outcomes: T[], weights?: Num[], options?: { normalize?: boolean }) → Finite<T> (+2 overloads)` — A finite distribution from an array of outcomes equally likely; a repeated outcome counts each time an array and weights finite(["a", "b"], ["1/3", "2/3"])… · src/finite.js:290 · finite-probability
+- `die(sides?: number) → Finite<number>` — A fair die: the numbers 1 to sides. · src/finite.js:314 · finite-probability
+- `dice(n: number, sides?: number) → Finite<number[]>` — n dice thrown together: outcomes are tuples. · src/finite.js:316 · finite-probability
+- `coin(p?: Num) → Finite<"H" | "T">` — A coin showing "H" with probability p. · src/finite.js:318 · finite-probability
+- `deck() → string[]` — A standard deck of 52 cards, as text such as "Q♥". · src/finite.js:323 · finite-probability
+- `draw(items: T[], k: number, options?: { replace?: boolean; ordered?: boolean }) → Finite<T[]>` — Drawing k of the items, every result equally likely. { replace: false, ordered: false } a hand: k distinct items, order ignored (the default) { ordered:… · src/finite.js:335 · finite-probability
+- `bayes( prior: Finite<T> | Record<string, Num> | Map<T, Num>, likelihood: ((hypothesis: T) => Num) | Record<string, Num> | Map<T, Num>, ) → { posterior: Finite<T>; evidence: Rational; table: { hypothesis: T; prior: Rational …` — Bayes' rule on a finite set of hypotheses. · src/finite.js:348 · finite-probability
+- `Discrete class: kind, name, min, max, mean, variance, mode, pmf, cdf, sf, prob, quantile, median, sd, sample, samples, toFinite, toString` — A distribution on whole numbers. pmf(k) P(X = k) cdf(k) P(X ≤ k) sf(k) P(X > k) prob(a, b) P(a ≤ X ≤ b) quantile(p) the least k with P(X ≤ k) ≥ p mean,… · src/discrete-dists.js:28
+- `bernoulli(p: Num) → Discrete` — One trial: 1 with probability p, otherwise 0. · src/discrete-dists.js:123 · reference
+- `binomial(n: number, p: Num) → Discrete` — The number of successes in n independent trials, each succeeding with probability p. · src/discrete-dists.js:134 · discrete-distributions
+- `geometric(p: Num, options?: { failures?: boolean }) → Discrete` — The number of the trial on which the first success comes (1, 2, 3, …). · src/discrete-dists.js:155 · discrete-distributions
+- `negativeBinomial(r: number, p: Num) → Discrete` — The number of failures before the r-th success. · src/discrete-dists.js:174 · discrete-distributions
+- `hypergeometric(N: number, K: number, n: number) → Discrete` — The number of marked items among n drawn without replacement from N items of which K are marked. · src/discrete-dists.js:196 · finite-probability
+- `discreteUniform(a: number, b: number) → Discrete` — A whole number from a to b, each equally likely. · src/discrete-dists.js:225
+- `poisson(lambda: Num) → Discrete` — The Poisson distribution with mean λ. · src/discrete-dists.js:244 · discrete-distributions
+- `count(data: Datum[]) → number` · src/describe.js:28 · finite-probability
+- `sum(data: Datum[]) → Value` · src/describe.js:29 · finite-probability
+- `mean(data: Datum[]) → Value` · src/describe.js:30 · descriptive
+- `weightedMean(data: Datum[], weights: Num[]) → Value` — Σ wᵢxᵢ / Σ wᵢ. · src/describe.js:35
+- `variance(data: Datum[], options?: { population?: boolean }) → Value` — The variance: the sum of squared deviations from the mean over n − 1, or over n with { population: true }. · src/describe.js:45 · descriptive
+- `sd(data: Datum[], options?: { population?: boolean; bits?: number }) → Value` — The standard deviation: exact when the variance is a perfect square, otherwise certified. · src/describe.js:54 · descriptive
+- `moment(data: Datum[], k: number, options?: { central?: boolean }) → Value` — The k-th moment about 0, or about the mean with { central: true } (divisor n). · src/describe.js:56
+- `skewness(data: Num[], options?: Bits) → Value` — The skewness m₃/m₂^(3/2) (certified unless it is rational). · src/describe.js:63 · descriptive
+- `kurtosis(data: Num[], options?: { excess?: boolean }) → Rational` — The kurtosis m₄/m₂², exactly; 3 for a normal distribution. · src/describe.js:72 · descriptive
+- `min(data: Datum[]) → Value` · src/describe.js:79 · reference
+- `max(data: Datum[]) → Value` · src/describe.js:80 · bootstrap
+- `range(data: Datum[]) → Value` · src/describe.js:81
+- `quantile(data: Num[], p: Num, options?: { method?: QuantileMethod }) → Rational` — The p-quantile of the data. · src/describe.js:135 · descriptive
+- `median(data: Num[]) → Rational` · src/describe.js:139 · descriptive
+- `quartiles(data: Num[], options?: { method?: QuantileMethod }) → [Rational, Rational, Rational]` — [Q1, median, Q3]. · src/describe.js:141 · descriptive
+- `iqr(data: Num[], options?: { method?: QuantileMethod }) → Rational` — Q3 − Q1 (for interval data, an enclosure). · src/describe.js:143 · descriptive
+- `fiveNumber(data: Num[], options?: { method?: QuantileMethod }) → [Rational, Rational, Rational, Rational, Rational]` — [minimum, Q1, median, Q3, maximum]. · src/describe.js:148
+- `mad(data: Num[]) → Rational` — The median of the absolute deviations from the median. · src/describe.js:153 · descriptive
+- `trimmedMean(data: Num[], fraction: Num) → Rational` — The mean after dropping the given fraction of values from each end (rounded down to whole values). · src/describe.js:159 · descriptive
+- `frequencies(data: Num[]) → { value: Rational; count: number; proportion: Rational; cumulative: Rational }[]` — Rows { value, count, proportion, cumulative } for each distinct value, in increasing order. · src/describe.js:168 · descriptive
+- `modes(data: Num[]) → Rational[]` — The most frequent values (all of them when there is a tie). · src/describe.js:186 · descriptive
+- `histogram( data: Num[], options?: { edges?: Num[]; width?: Num; start?: Num; bins?: number }, ) → { from: Rational; to: Rational; count: number; proportion: Rational; density: Rational }[]` — Counts in classes [edge, next edge), the last class closed on the right. · src/describe.js:195 · descriptive
+- `covariance(x: Datum[], y: Datum[], options?: { population?: boolean }) → Value` — The covariance, with divisor n − 1 (or n with { population: true }). · src/describe.js:248 · descriptive
+- `correlation(x: Num[], y: Num[], options?: Bits) → Value` — Pearson's correlation coefficient: exact when it is rational, otherwise certified. · src/describe.js:257 · descriptive
+- `leastSquares(x: Num[], y: Num[]) → Fit` — The least-squares line y = intercept + slope·x, exactly. { slope, intercept, r2, residuals, fitted, sse, sst, n, predict(x) } · src/describe.js:272 · descriptive
+- `summary(data: Datum[], options?: Bits) → { n: number; mean: Value; min: Value; q1: Value; median: Value; q3: Value; max: Value; iqr: Value; range: Value; variance?: Value; sd?: Value; outliers?: Rational[]; modes?: …` — Everything at once: n, mean, variance, sd, the five-number summary, the interquartile range and the values beyond 1.5 of it from the quartiles. · src/describe.js:304 · descriptive
+- `fast: { sum(data: number[]): number; mean(data: number[]): number; variance(data: number[], options?: { population?: boolean }): number; sd(data: number[], options?: { population?: boolean }): number; quantile(data: …` — Floating-point versions for simulation: quick, approximate, and never mixed with the exact ones. · src/describe.js:335 · descriptive
+- `Continuous class: kind, name, params, high, mean, variance, pdf, cdf, sf, prob, quantile, median, sd, sample, samples, sampleExact, samplesExact, fast, toString` — A continuous distribution. pdf(x) the density cdf(x) P(X ≤ x) sf(x) P(X > x) prob(a, b) P(a ≤ X ≤ b) quantile(p) the x with P(X ≤ x) = p mean, variance,… · src/continuous.js:56
+- `normal(mu?: Num, sigma?: Num) → Continuous` — The normal distribution with mean μ and standard deviation σ (not the variance). · src/continuous.js:185 · continuous-distributions
+- `lognormal(mu?: Num, sigma?: Num) → Continuous` — The lognormal distribution: log X is normal with mean μ and standard deviation σ. · src/continuous.js:207 · estimation
+- `gamma(shape: Num, rate?: Num) → Continuous` — The gamma distribution with the given shape and rate (mean shape/rate). · src/continuous.js:253 · continuous-distributions
+- `chiSquare(k: Num) → Continuous` — The chi-square distribution with k degrees of freedom. · src/continuous.js:259 · continuous-distributions
+- `exponential(rate?: Num) → Continuous` — The exponential distribution with the given rate (mean 1/rate). · src/continuous.js:264 · certified-answers
+- `weibull(shape: Num, scale?: Num) → Continuous` — The Weibull distribution with the given shape k and scale λ. · src/continuous.js:281 · reference
+- `beta(a: Num, b: Num) → Continuous` — The beta distribution on [0, 1] with parameters a and b. · src/continuous.js:321 · reference
+- `studentT(df: Num) → Continuous` — Student's t distribution with ν degrees of freedom. · src/continuous.js:351 · continuous-distributions
+- `fDist(d1: Num, d2: Num) → Continuous` — The F distribution with d1 and d2 degrees of freedom. · src/continuous.js:378
+- `uniform(a?: Num, b?: Num) → Continuous` — The uniform distribution on [a, b]. · src/continuous.js:413 · continuous-distributions
+- `cauchy(location?: Num, scale?: Num) → Continuous` — The Cauchy distribution with the given location and scale. · src/continuous.js:433 · continuous-distributions
+- `TestResult class: test, statistic, pValue, alternative, kind, decision, reject, toString, field` — The outcome of a test. test, statistic, pValue, alternative, kind ("exact", "certified" or "simulated") decision(alpha) "reject", "keep", or "too close to… · src/tests.js:23 · reference
+- `binomialTest(successes: number, trials: number, p0?: Num, options?: { alternative?: Alternative }) → TestResult & { interval(options?: { level?: Num; method?: "exact" | "wilson" | "wald"; bits?: number }): ProportionInterval }` — The exact binomial test of H₀: p = p0, from k successes in n trials. · src/tests.js:111 · exact-tests
+- `fisherTest(table: [[number, number], [number, number]], options?: { alternative?: Alternative }) → TestResult & { oddsRatio: Rational | number | null }` — Fisher's exact test on a 2×2 table [[a, b], [c, d]]: with the margins fixed, a follows a hypergeometric distribution under independence. "greater" means the… · src/tests.js:140 · exact-tests
+- `permutationTest( x: Num[], y: Num[], options?: { statistic?: "mean" | "median" | ((values: Rational[]) => Num); alternative?: Alternative; paired?: boolean; limit?: number; resamples?: number; seed?: Seed }, ) → TestResult & { …` — A permutation test for two groups: if the groups do not differ, every way of dealing the pooled values into groups of these sizes is equally likely. · src/tests.js:187 · exact-tests
+- `proportionInterval(successes: number, trials: number, options?: { level?: Num; method?: "exact" | "wilson" | "wald"; bits?: number }) → ProportionInterval` — An interval for a binomial proportion from k successes in n trials. method "exact" Clopper and Pearson's interval: its coverage is never below the level. · src/tests.js:55 · exact-tests
+- `Model class: spec, with, truthAt, sample, toString` — A known truth and how observations depart from it. truth a number (the value every observation would have), the coefficients [b0, b1, …] of b0 + b1·x + …,… · src/model.js:84
+- `Dataset class: kind, x, y, trueX, trueY, contaminated, censored, missing, seed, exact, model, n, complete, toString` — Simulated data. · src/model.js:38
+- `model(spec: ModelSpec) → Model` · src/model.js:195 · models
+- `zTest(data: Num[], options: { sigma: Num; mu?: Num; alternative?: Alternative; bits?: number }) → TTestResult` — The z test for a mean when the standard deviation σ is known. zTest(data, { sigma, mu = 0, alternative }) · src/inference.js:116 · means
+- `tTest(x: Num[], options?: { mu?: Num; alternative?: Alternative; bits?: number }) → TTestResult (+1 overload)` — Student's t tests. tTest(x, { mu = 0 }) one sample: is the mean μ0? tTest(x, y, { paired: true }) the mean of the differences x − y tTest(x, y) two samples,… · src/inference.js:147 · means
+- `meanInterval(data: Num[], options?: { level?: Num; sigma?: Num; alternative?: Alternative; bits?: number }) → Interval` — A confidence interval for a mean: t when σ is unknown, z when it is given. { low, high, level, estimate, method }; one-sided with { alternative }. · src/inference.js:190 · means
+- `varianceInterval(data: Num[], options?: { level?: Num; bits?: number }) → Interval & { sd: { low: Rational; high: Rational } }` — The chi-square interval for a variance from normal data: ((n − 1)s²/χ²(1 − α/2), (n − 1)s²/χ²(α/2)). · src/inference.js:209 · variances-proportions
+- `varianceTest(data: Num[], variance0: Num, options?: { alternative?: Alternative; bits?: number }) → TestResult & { statistic: Rational; df: number }` — The chi-square test of H₀: σ² = σ0² from normal data. · src/inference.js:224 · variances-proportions
+- `fTest(x: Num[], y: Num[], options?: { ratio?: Num; alternative?: Alternative; bits?: number }) → TestResult & { statistic: Rational; df: [number, number]; interval(options?: { level?: Num }): Interval }` — The F test of H₀: σ₁²/σ₂² = ratio for two normal samples. · src/inference.js:243 · variances-proportions
+- `proportionTest(successes: number, trials: number, p0?: Num, options?: { alternative?: Alternative; correct?: boolean; bits?: number }) → TTestResult (+1 overload)` — The z test for proportions. proportionTest(k, n, p0) one sample: z² = (k − n·p0)²/(n·p0(1 − p0)) proportionTest([k1, k2], [n1, n2]) two samples, with the… · src/inference.js:277 · variances-proportions
+- `chiSquareTest(observed: number[] | number[][], options?: { p?: Num[]; expected?: Num[]; estimated?: number; correct?: boolean; bits?: number }) → ChiSquareResult` — Pearson's chi-square tests. chiSquareTest(counts, { p }) goodness of fit to probabilities p (default: all equal) chiSquareTest(counts, { expected }) … or to… · src/inference.js:332 · chi-square
+- `correlationTest(x: Num[], y: Num[], options?: { alternative?: Alternative; bits?: number }) → TestResult & { estimate: Value; rSquared: Rational; statisticSquared: Rational | null; df: number; interval(options?: { level?: Num; bits?: …` — The test of zero correlation for paired normal data: t² = r²(n − 2)/(1 − r²) on n − 2 degrees of freedom, exact since r² is rational. · src/inference.js:392
+- `fit(data: Num[], family: Family, options?: { method?: "mle" | "moments"; trials?: number; failures?: boolean; bits?: number }) → FittedFamily` — Fit a family of distributions to data, by maximum likelihood ("mle", the default) or the method of moments ("moments"). fit(data, "normal") → { family,… · src/inference.js:452 · descriptive
+- `LinearModel class: n, p, df, intercept, names, coefficients, fitted, residuals, sse, ssr, sst, rSquared, adjustedRSquared, variance, sigma, covariance, leverage, cooksDistance, columns, y, coefficient, test, interval, table, fTest, predict, predictionInterval, standardizedResiduals, toString` — A fitted linear model y = b₀ + b₁x₁ + … + e. coefficients, names the exact least-squares coefficients fitted, residuals exact sse, ssr, sst residual,… · src/regression.js:97
+- `linearModel(x: Predictors, y: Num[], options?: { intercept?: boolean; names?: string[] }) → LinearModel` — Fit y = b₀ + Σ bⱼxⱼ by least squares, exactly. linearModel(x, y) x: a list, rows, or { name: column } linearModel(x, y, { intercept: false }) through the… · src/regression.js:214 · regression
+- `polyFit(x: Num[], y: Num[], degree: number, options?: { intercept?: boolean }) → LinearModel` — Least-squares polynomial of the given degree: y = b₀ + b₁x + … + b_d·x^d, exactly. predict takes a single x. · src/regression.js:264 · regression
+- `dummies(labels: Iterable<unknown>, options?: { reference?: unknown; name?: string }) → Record<string, number[]>` — 0/1 indicator columns for a categorical variable, one for each level but the reference (the first level in order of appearance, unless given), for use as… · src/regression.js:277 · anova
+- `compareModels(small: LinearModel, big: LinearModel, options?: Bits) → TestResult` — The F test of a smaller model against a larger one that contains it (the same y, and every column of the smaller model in the column space of the larger,… · src/regression.js:294 · regression
+- `anova(groups: Num[][] | Record<string, Num[]>, options?: Bits) → AnovaResult` — One-way analysis of variance: do the groups share a mean? anova([[…], […], …]) or anova({ a: […], b: […] }) The sums of squares, mean squares and F are… · src/regression.js:319 · anova
+- `SimulatedRate class: kind, rate, hits, runs, seed, interval, truth, meanWidth, alpha, effect, compare, toString` — A rate estimated by simulation: hits out of runs, with an exact interval for the rate it estimates. · src/experiment.js:23 · reference
+- `SimulatedEstimates class: kind, estimates, mean, sd, standardError, runs, seed, truth, bias, rmse, toString` — What an estimator did over many data sets, in floating point. · src/experiment.js:132 · reference
+- `howOften(options: DataSource<D> & RunOptions & { event: (data: D, run: number) => boolean; level?: Num }) → SimulatedRate` — How often something happens: `event(data)` says yes or no for each of `runs` data sets. howOften({ model, n, event, runs: 1000, seed: 1 }) howOften({ draw:… · src/experiment.js:54 · experiments
+- `coverage( options: DataSource<D> & RunOptions & { interval: (data: D) => [Datum, Datum] | { low: Datum; high: Datum }; truth: Num; level?: Num }, ) → SimulatedRate` — How often an interval procedure contains the truth. coverage({ model, n, interval: (data) => [low, high], truth, runs, seed }) `interval` may return [low,… · src/experiment.js:71 · experiments
+- `rejectionRate(options: DataSource<D> & RunOptions & { test: (data: D) => number | Value | TestResult | boolean; alpha?: Num; level?: Num }) → SimulatedRate` — How often a test rejects at level α. rejectionRate({ model, n, test: (data) => pValue, alpha: 0.05, runs, seed }) When the model satisfies the null… · src/experiment.js:108 · experiments
+- `powerCurve( options: RunOptions & { effects: E[]; model?: (effect: E) => Model; n?: number; draw?: (effect: E) => (rng: Random, run: number) => D; test: (data: D) => number | Value | TestResult | boolean; alpha?: Num; level?: …` — The rejection rate at each of several effects. powerCurve({ effects: [0, 0.2, 0.5], model: (effect) => model(...), n, test, alpha, runs, seed }) or with… · src/experiment.js:122 · experiments
+- `estimatorStudy(options: DataSource<D> & RunOptions & { estimator: (data: D, run: number) => number | Value; truth?: Num }) → SimulatedEstimates` — The sampling distribution of an estimator. estimatorStudy({ model, n, estimator: (data) => number, truth, runs, seed }) Returns the estimates and their… · src/experiment.js:154 · experiments
+- `ranks(data: Num[]) → { ranks: Rational[]; ties: number[] }` — Midranks: the rank of each value in the list (1 for the smallest), ties sharing the average of the ranks they span. · src/rank.js:44 · rank-tests
+- `signTest(x: Num[], y?: Num[] | { mu?: Num; alternative?: Alternative }, options?: { mu?: Num; alternative?: Alternative }) → TestResult & { n: number; zeros: number }` — The sign test: under H₀ the median of x (or of x − y, paired) is mu, so each non-zero difference is positive with probability 1/2. · src/rank.js:104 · rank-tests
+- `wilcoxonTest( x: Num[], y?: Num[] | { mu?: Num; alternative?: Alternative; method?: RankMethod; correct?: boolean; bits?: number }, options?: { mu?: Num; alternative?: Alternative; method?: RankMethod; correct?: boolean; bits?: …` — Wilcoxon's signed-rank test of H₀: the differences (x − mu, or x − y − mu when paired) are symmetric about 0. · src/rank.js:134 · rank-tests
+- `mannWhitneyTest(x: Num[], y: Num[], options?: { alternative?: Alternative; method?: RankMethod; correct?: boolean; bits?: number }) → TestResult & { rankSum: Rational; m: number; n: number; mean: Rational; variance: Rational …` — The Mann–Whitney (Wilcoxon rank-sum) test of H₀: x and y come from the same distribution. · src/rank.js:184 · rank-tests
+- `kruskalWallisTest(groups: Num[][], options?: { bits?: number }) → TestResult & { df: number; meanRanks: Rational[] }` — The Kruskal–Wallis test of H₀: k groups come from the same distribution. · src/rank.js:227 · rank-tests
+- `spearmanTest(x: Num[], y: Num[], options?: { alternative?: Alternative; method?: RankMethod; bits?: number }) → TestResult & { rho2: Rational; n: number }` — Spearman's rank correlation: Pearson's correlation of the midranks. ρ² is exact; ρ is exact when there are no ties and certified otherwise. method "exact"… · src/rank.js:258 · rank-tests
+- `kendallTest(x: Num[], y: Num[], options?: { alternative?: Alternative; method?: RankMethod; bits?: number }) → TestResult & { S: number; n: number }` — Kendall's τ: S = concordant − discordant pairs, and τ_b = S/√(n₀ − n₁)(n₀ − n₂) with the tie corrections (τ_a = τ_b without ties). method "exact" the… · src/rank.js:352 · rank-tests
+- `ksTest( x: Num[], against: Num[] | Continuous | ((x: Rational) => Num), options?: { alternative?: Alternative; exactUpTo?: number; resamples?: number; seed?: Seed; bits?: number }, ) → TestResult & { method: string }` — The Kolmogorov–Smirnov test. ksTest(x, dist) one sample against a distribution: a Continuous (its certified cdf) or a function x ↦ F(x) giving exact rationals. · src/rank.js:485 · kolmogorov-smirnov
+- `kolmogorovCdf(n: number, d: Num) → Rational` — P(Dₙ < d) for the one-sample Kolmogorov statistic, exactly, by the method of Marsaglia, Tsang and Wang (2003): n!/nⁿ times an entry of Hⁿ, with H a (2k −… · src/rank.js:403 · kolmogorov-smirnov
+- `kolmogorovTail(n: number, d: Num) → Value` — The two-sided tail P(Dₙ ≥ d). · src/rank.js:464
+- `smirnovTail(n: number, d: Num) → Rational` — P(Dₙ⁺ ≥ d), the one-sided tail, exactly (Smirnov; Birnbaum and Tingey): d · Σ_{j=0}^{⌊n(1−d)⌋} C(n, j) (1 − d − j/n)^{n−j} (d + j/n)^{j−1}. · src/rank.js:444
+- `bootstrap( data: Num[], statistic?: "mean" | "median" | "variance" | ((values: Rational[]) => Num), options?: { resamples?: number; seed?: Seed; level?: Num; method?: "percentile" | "basic"; exactUpTo?: number; bits?: number } …` — The bootstrap: the sampling distribution of a statistic, estimated by resampling the data with replacement. bootstrap(data, statistic, { resamples, seed,… · src/rank.js:605 · bootstrap
+- `Bootstrap class: kind, method, statistic, n, estimate, mean, bias, se, variance, interval, distinct, distribution, replicates, resamples, seed, toString` · src/rank.js:687 · reference
+- `MarkovChain class: P, states, size, p, power, distribution, classes, isIrreducible, isErgodic, stationary, absorption, hitting, meanReturnTime, simulate, toString` · src/markov.js:35 · reference
+- `markovChain(matrix: Num[][] | Record<string, Record<string, Num>>, options?: { states?: State[] }) → MarkovChain` — A finite Markov chain from its transition matrix (rows: from, columns: to), as a list of rows or an object { from: { to: p } }. · src/markov.js:262 · markov-chains
+- `betaPrior(a?: Num, b?: Num) → Belief & { update(data: { successes: number; failures?: number; trials?: number } | (0 | 1)[]): ReturnType<typeof betaPrior>; predictive(m: number): CountLaw & { table: Rational[] }; }` — A beta prior for a probability p: Beta(a, b), as if a − 1 successes and b − 1 failures had been seen. · src/conjugate.js:63 · bayesian-updating
+- `gammaPrior(shape: Num, rate: Num, options?: { likelihood?: "poisson" | "exponential" }) → Belief & { likelihood: "poisson" | "exponential"; update(data: Num[]): ReturnType<typeof gammaPrior>; predictive(): CountLaw; }` — A gamma prior for a rate λ: Gamma(shape α, rate β). likelihood "poisson" .update(counts): α + Σx, β + n likelihood "exponential" .update(times): α + n, β +… · src/conjugate.js:108 · bayesian-updating
+- `normalPrior(mean: Num, options: { variance?: Num; sd?: Num; dataVariance?: Num; dataSd?: Num }) → Belief & { update(data: Num[]): ReturnType<typeof normalPrior> }` — A normal prior N(μ₀, τ₀²) for the mean of normal data with known variance σ². · src/conjugate.js:159 · bayesian-updating
+- `dirichletPrior(alpha: Num[] | Record<string, Num>) → Belief & { update(counts: number[] | Record<string, number>): ReturnType<typeof dirichletPrior>; marginal(category: string | number): ReturnType<typeof betaPrior>; predictive(): …` — A Dirichlet prior for the probabilities of k categories, with weights α (a list, or an object keyed by category). · src/conjugate.js:204 · bayesian-updating
+- `rng` — from @ratmath/discrete
+- `Random` — from @ratmath/discrete
+- `plan: readonly PlannedPhase[]` · src/plan.js:5
+
+## Example
+
+```js
+import { show, binomial, normal, howOften } from "@ratmath/stats";
+// One question, three kinds of answer.
+// How likely are 11 or more heads in 16 tosses of a fair coin?
+const X = binomial(16, "1/2");
+console.log("exact:     ", String(X.sf(10)), "=", show(X.sf(10), 6));
+
+// The same from the normal curve with a continuity correction: certified, and an approximation.
+const approx = normal(8, 2).sf("10.5");      // mean 8, standard deviation 2
+console.log("certified: ", show(approx, 12), "(the normal curve's answer, to 12 places)");
+
+// And by tossing coins: simulated, with its own error bars.
+const sim = howOften({ draw: (rng) => X.sample(rng), event: (k) => k >= 11, runs: 4000, seed: 1 });
+console.log("simulated: ", String(sim));
+sim.compare(X.sf(10))   // is the exact answer inside the simulation's interval?
+```
+
+## More
+
+- tests/: worked examples for every function
+- https://ratmath.com/core/ (numbers), https://ratmath.com/shelf/ (all the libraries)
