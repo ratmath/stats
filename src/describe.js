@@ -96,8 +96,21 @@ const METHODS = {
   hazen: [ZERO, Q(1, 2)], // type 5
   "median-unbiased": [Q(1, 3), Q(1, 3)], // type 8
 };
+// Quartiles as most school textbooks and calculators find them: the medians of
+// the lower and upper halves of the sorted data. "halves" leaves the median out
+// of both halves when n is odd (the TI-84 and most US textbooks); "tukey" puts
+// it in both (Tukey's hinges). Only the levels 1/4, 1/2 and 3/4 make sense.
+function halvesQuartile(s, p, method) {
+  const n = s.length;
+  if (p.equals(Q(1, 2)) || n === 1) return quantileSorted(s, Q(1, 2), "linear");
+  const quarter = p.equals(Q(1, 4));
+  if (!quarter && !p.equals(Q(3, 4))) refuse("bad-argument", `the "${method}" method gives only the quartiles (levels 1/4, 1/2 and 3/4), not the level ${p}`);
+  const h = method === "tukey" ? Math.ceil(n / 2) : Math.floor(n / 2);
+  return quantileSorted(quarter ? s.slice(0, h) : s.slice(n - h), Q(1, 2), "linear");
+}
 function quantileSorted(s, p, method) {
   const n = s.length;
+  if (method === "halves" || method === "tukey") return halvesQuartile(s, p, method);
   if (method === "lower" || method === "higher" || method === "nearest" || method === "inverse") {
     // by counting: the smallest value with at least a fraction p of the data at or below it
     const np = p.multiply(Q(n));
@@ -117,7 +130,7 @@ function quantileSorted(s, p, method) {
     return h.denominator === 1n ? s[lo] : s[lo].add(s[lo + 1]).divide(Q(2));
   }
   const rule = METHODS[method];
-  if (!rule) refuse("bad-argument", `unknown quantile method "${method}"; use linear, weibull, hazen, median-unbiased, inverse, lower, higher, nearest or midpoint`);
+  if (!rule) refuse("bad-argument", `unknown quantile method "${method}"; use linear, weibull, hazen, median-unbiased, inverse, lower, higher, nearest, midpoint, halves or tukey`);
   const [a, b] = rule;
   const h = Q(n).add(a).multiply(p).add(b); // a position from 1 to n
   if (h.compareTo(ONE) <= 0) return s[0];
@@ -131,6 +144,9 @@ function quantileSorted(s, p, method) {
  * between the two nearest values in sorted order (type 7); others are
  * "weibull", "hazen", "median-unbiased", "inverse" (the empirical
  * distribution's own quantile), "lower", "higher", "nearest" and "midpoint".
+ * For quartiles only, "halves" (medians of the lower and upper halves, the
+ * median left out when n is odd: school textbooks and the TI-84) and "tukey"
+ * (the same with the median kept in both halves: Tukey's hinges).
  */
 export function quantile(data, p, { method = "linear" } = {}) {
   const level = probability(p, "the level");

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Rational, RationalInterval } from "@ratmath/core";
+import { Rational, RationalInterval, Integer } from "@ratmath/core";
 import { permutations, combinations } from "@ratmath/discrete";
 import * as S from "../index.js";
 
@@ -93,6 +93,9 @@ describe("finite probability", () => {
   test("sums, products and powers", () => {
     expect(str(S.die().sumOf(10).p(35))).toBe("7631/104976");
     expect(str(S.die().plus(S.die()).p(7))).toBe("1/6");
+    // Core's Integer (what R`1` gives) counts as a number
+    expect(str(S.die().mean((d) => (d % 2 === 0 ? new Integer(1n) : new Rational(1n, 2n))))).toBe("3/4");
+    expect(str(S.die().map((d) => new Integer(BigInt(d % 2))).p(new Integer(1n)))).toBe("1/2");
     const heads = S.coin("1/3").power(3).map((t) => t.filter((c) => c === "H").length);
     expect(str(heads.p(2))).toBe("2/9");
     expect(S.coin().product(S.die(), ["x", "y"]).size).toBe(24);
@@ -274,6 +277,18 @@ describe("descriptive statistics", () => {
     expect(() => S.kurtosis([1, 1])).toThrow(/equal/);
     expect(() => S.trimmedMean(data, "1/2")).toThrow(/below 1\/2/);
     expect(() => S.weightedMean([1, 2], [1])).toThrow(/one weight/);
+  });
+  test("textbook quartiles: medians of the halves", () => {
+    const odd = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    expect(S.quartiles(odd, { method: "halves" }).map(str)).toEqual(["5/2", "5", "15/2"]);
+    expect(S.quartiles(odd, { method: "tukey" }).map(str)).toEqual(["3", "5", "7"]);
+    const even = [3, 7, 8, 12, 13, 14, 18, 21];
+    expect(S.quartiles(even, { method: "halves" }).map(str)).toEqual(["15/2", "25/2", "16"]);
+    expect(str(S.iqr(even, { method: "halves" }))).toBe("17/2");
+    expect(S.fiveNumber([6, 7, 15, 36, 39, 40, 41, 42, 43, 47, 49], { method: "halves" }).map(str)).toEqual(["6", "15", "40", "43", "49"]);
+    expect(S.fiveNumber([6, 7, 15, 36, 39, 40, 41, 42, 43, 47, 49], { method: "tukey" }).map(str)).toEqual(["6", "51/2", "40", "85/2", "49"]);
+    expect(str(S.quartiles([4], { method: "halves" })[0])).toBe("4");
+    expect(() => S.quantile(odd, "1/10", { method: "halves" })).toThrow(/only the quartiles/);
   });
   test("quantiles by every method", () => {
     const xs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];

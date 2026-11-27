@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Quartiles the school way: `quartiles`, `iqr`, `fiveNumber` and `quantile`
+  take `{ method: "halves" }` (medians of the lower and upper halves, the
+  median left out when n is odd, as in most textbooks and the TI-84) and
+  `{ method: "tukey" }` (the median kept in both halves). Found by the Course
+  Test (ratmath/shelf#7).
+- Finite distributions accept Core's `Integer` (what ``R`1` `` gives) wherever
+  they need a number: `mean(f)` and friends no longer refuse it, and an
+  `Integer` outcome is the same outcome as the equal `Rational`.
+
 - `@ratmath/core` is now a peer dependency (`>=0.10.0 <0.12.0`): the package
   uses the program's own copy of Core instead of bringing its own, so Core 0.11
   works and there is never a second copy whose `Rational` is not the same class.

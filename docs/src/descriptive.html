@@ -51,6 +51,8 @@ quantile(data, "0.9", { method: "lower" });    // 7: always one of the data valu
 <tr><td>median-unbiased</td><td>\((n + \tfrac13)p + \tfrac13\), interpolated</td></tr>
 <tr><td>inverse</td><td>the least value whose cumulative proportion reaches \(p\)</td></tr>
 <tr><td>lower, higher, nearest, midpoint</td><td>the linear position, moved to a data value below, above or nearest, or the midpoint of the two</td></tr>
+<tr><td>halves</td><td>quartiles only: the medians of the lower and upper halves, leaving the median out when \(n\) is odd. This is how most school textbooks and the TI-84 find \(Q_1\) and \(Q_3\).</td></tr>
+<tr><td>tukey</td><td>quartiles only: the same with the median kept in both halves (Tukey's hinges)</td></tr>
 </table></div>
 
 <h2>Counts</h2>
