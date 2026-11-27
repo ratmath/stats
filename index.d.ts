@@ -111,7 +111,7 @@ export function poisson(lambda: Num): Discrete;
 
 // ---- descriptive statistics ---------------------------------------------------
 
-export type QuantileMethod = "linear" | "weibull" | "hazen" | "median-unbiased" | "inverse" | "lower" | "higher" | "nearest" | "midpoint";
+export type QuantileMethod = "linear" | "weibull" | "hazen" | "median-unbiased" | "inverse" | "lower" | "higher" | "nearest" | "midpoint" | "halves" | "tukey";
 export function count(data: Datum[]): number;
 export function sum(data: Datum[]): Value;
 export function mean(data: Datum[]): Value;

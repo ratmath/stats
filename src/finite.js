@@ -2,13 +2,14 @@
 // rational probabilities that add up to 1. Events, conditioning, random
 // variables, joint and marginal distributions and Bayes' rule are all sums
 // and quotients of those rationals.
-import { Rational, RationalInterval } from "@ratmath/core";
+import { Rational, RationalInterval, Integer } from "@ratmath/core";
 import { combinations, permutations, words } from "@ratmath/discrete";
 import { refuse, toQ, ZERO, ONE, Q, sqrt, whole, probability } from "./num.js";
 
 /** A text key that is the same for outcomes that should count as the same. */
 export function keyOf(o) {
   if (o instanceof Rational) return `q${o.numerator}/${o.denominator}`;
+  if (o instanceof Integer) return `q${o.value}/1`;
   switch (typeof o) {
     case "number":
       return Number.isFinite(o) ? keyOf(toQ(o)) : `n${o}`;
@@ -30,7 +31,7 @@ export function keyOf(o) {
 }
 const numeric = (o, what) => {
   if (o instanceof Rational) return o;
-  if (typeof o === "number" || typeof o === "bigint") return toQ(o, what);
+  if (o instanceof Integer || typeof o === "number" || typeof o === "bigint") return toQ(o, what);
   if (typeof o === "boolean") return o ? ONE : ZERO;
   return refuse("not-numeric", `${what} needs numbers, but an outcome is ${showOutcome(o)}; use map(f) to turn outcomes into numbers`);
 };

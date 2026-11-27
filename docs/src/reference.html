@@ -74,7 +74,7 @@
 <tr><td>variance(data, { population }), sd, moment(data, k, { central })</td><td>Sample variance unless <code>population</code>.</td></tr>
 <tr><td>skewness, kurtosis(data, { excess })</td><td>\(m_3/m_2^{3/2}\) and \(m_4/m_2^2\).</td></tr>
 <tr><td>min, max, range, median, quartiles, iqr, fiveNumber</td><td>Order statistics; <code>quartiles</code> is <code>[q1, median, q3]</code>.</td></tr>
-<tr><td>quantile(data, p, { method })</td><td><code>linear</code>, <code>weibull</code>, <code>hazen</code>, <code>median-unbiased</code>, <code>inverse</code>, <code>lower</code>, <code>higher</code>, <code>nearest</code>, <code>midpoint</code>.</td></tr>
+<tr><td>quantile(data, p, { method })</td><td><code>linear</code>, <code>weibull</code>, <code>hazen</code>, <code>median-unbiased</code>, <code>inverse</code>, <code>lower</code>, <code>higher</code>, <code>nearest</code>, <code>midpoint</code>; for quartiles also <code>halves</code> (textbook) and <code>tukey</code>.</td></tr>
 <tr><td>mad, trimmedMean(data, fraction)</td><td>Median absolute deviation; the mean after dropping a fraction from each end.</td></tr>
 <tr><td>frequencies, modes, histogram(data, { edges | width, start | bins })</td><td>Counts by value and by class.</td></tr>
 <tr><td>covariance(x, y), correlation(x, y)</td><td>Sample covariance; Pearson's \(r\).</td></tr>
