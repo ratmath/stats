@@ -1,0 +1,2175 @@
+# @ratmath/stats 0.3.0: full documentation
+
+> Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. From https://ratmath.com/stats/, commit 6f486af. Each page ends with a runnable example; in it, PRINT(...) prints.
+
+
+---
+
+Page: https://ratmath.com/stats/index.html
+
+@ratmath/stats
+
+## Statistics that says what kind of answer it is giving
+
+Probability and statistics in one library, with three kinds of answer that are never mixed up. An exact answer is a fraction. A certified answer is a pair of fractions with the true value between them, as narrow as you ask. A simulated answer comes from a seeded random experiment, and carries its seed and its own sampling error.
+
+### What is here
+
+### A first program
+
+```js
+import { dice, binomial, mean, variance, normal, show, binomialTest, model, estimatorStudy, fast } from "@ratmath/stats";
+
+// exact: fractions
+dice(2).prob(([a, b]) => a + b === 7);        // 1/6
+binomial(10, "1/3").cdf(4);                   // 15488/19683
+variance([2, 4, 4, 4, 5, 5, 7, 9]);           // 32/7
+binomialTest(14, 20, "1/2").pValue;           // 15115/131072
+
+// certified: enclosures, to any precision
+show(normal().quantile("0.975"), 18);                 // "1.95996398454005424…"
+show(normal().cdf("1.96", { bits: 160 }), 40);        // "0.9750021048517795658634157309591628099775"
+
+// simulated: a known truth, disturbed, and a procedure judged against it
+const line = model({ truth: [2, 0.5], x: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], noise: normal(0, 1) });
+String(estimatorStudy({ model: line, n: 50, truth: 0.5, runs: 2000, seed: 1,
+  estimator: (data) => fast.leastSquares(data.x, data.y).slope }));
+// "mean 0.49993, sd 0.049765, bias -0.000066071 ± 0.0021811, rmse 0.049753 (simulated: 2000 runs, seed 1)"
+```
+
+### Three kinds of answer
+
+Exact. Finite probability, the discrete distributions with rational parameters, descriptive statistics of exact data, and the exact tests all work in fractions. P(two dice sum to 7) is 1/6, and the variance of a list of decimals is the fraction it is. Nothing is rounded, so two exact answers can be compared with `equals`.
+
+Certified. The normal distribution function has no closed form, so its values are enclosures: two rationals with the true value between them. Ask for more bits and the enclosure narrows. A comparison of a certified p-value with a level answers "below", "above" or `"too close to call"`; it never guesses. See [Certified answers](https://ratmath.com/stats/certified-answers.html).
+
+Simulated. Anything found by drawing random numbers says so: its `kind` is `"simulated"`, it carries the seed that reproduces it, and a simulated rate comes with the exact binomial interval for the rate it estimates. See [Experiments](https://ratmath.com/stats/experiments.html).
+
+### Data from a truth you chose
+
+The part of this library that most packages lack: say what the truth is, say how observations depart from it (noise, unequal spread, contamination, error in x, rounding, censoring, missing values), draw data, and see whether a test or a regression recovers what you put in. Changing one departure leaves the random numbers of the others alone, so two versions of a model can be compared on the same data. See [Models with noise](https://ratmath.com/stats/models.html).
+
+### Inference and regression
+
+The standard tests and intervals (z and t tests, chi-square and F tests, proportions, fitted distributions) keep their statistic exact where it can be: t2, X2 and F are fractions, and the p-value is a certified enclosure computed at that exact argument. Linear regression and analysis of variance solve the normal equations over the rationals, so coefficients, residuals, leverages and R2 are exact. The package's own tests then use seeded models to check that the intervals cover and the tests have their stated size; see [Testing the tests](https://ratmath.com/stats/testing-the-tests.html).
+
+### Ranks, chains and beliefs
+
+The rank tests (sign, Wilcoxon, Mann–Whitney, Kruskal–Wallis, Spearman, Kendall) count their null distributions, ties included, so their p-values are exact fractions; Kolmogorov–Smirnov p-values are exact too, by matrix powers and by counting lattice paths. The bootstrap is exact for samples small enough to weigh every resample, and seeded otherwise. Markov chains get their stationary distributions, absorption probabilities and hitting times exactly, and conjugate Bayesian updating keeps posterior parameters, means and predictive probabilities as fractions. See [Rank tests](https://ratmath.com/stats/rank-tests.html), [The bootstrap](https://ratmath.com/stats/bootstrap.html), [Markov chains](https://ratmath.com/stats/markov-chains.html) and [Bayesian updating](https://ratmath.com/stats/bayesian-updating.html).
+
+### What is planned
+
+From the [library roadmap](https://github.com/ratmath/ratmath/blob/main/docs/design/library-roadmap.md#6-a-probability-and-statistics-package-ratmathstats). Sizes are rough estimates in lines of source.
+
+| Phase | Contents | Estimate |
+
+| 1 | Finite probability, discrete distributions, descriptive statistics, exact tests | built |
+
+| 2 | Continuous distributions, certified | built |
+
+| 3 | Seeded generation, models with noise and contamination, experiments | built |
+
+| 4 | Estimation, confidence intervals, the standard tests | built |
+
+| 5 | Regression and analysis of variance | built |
+
+| 6 | Rank tests, permutation tests, the bootstrap | built |
+
+| 7 | Markov chains; conjugate Bayesian updating | built |
+
+| 8 | Graphics hooks | 800 in graphics |
+
+The library stands on Core (fractions and enclosures), analytic (the certified special functions) and discrete (counting and the seeded generator, which is exported again here as `rng`).
+
+### Try it
+
+```js
+// One question, three kinds of answer.
+// How likely are 11 or more heads in 16 tosses of a fair coin?
+const X = binomial(16, "1/2");
+PRINT("exact:     ", String(X.sf(10)), "=", show(X.sf(10), 6));
+
+// The same from the normal curve with a continuity correction: certified, and an approximation.
+const approx = normal(8, 2).sf("10.5");      // mean 8, standard deviation 2
+PRINT("certified: ", show(approx, 12), "(the normal curve's answer, to 12 places)");
+
+// And by tossing coins: simulated, with its own error bars.
+const sim = howOften({ draw: (rng) => X.sample(rng), event: (k) => k >= 11, runs: 4000, seed: 1 });
+PRINT("simulated: ", String(sim));
+sim.compare(X.sf(10))   // is the exact answer inside the simulation's interval?
+```
+
+---
+
+Page: https://ratmath.com/stats/reference.html
+
+Reference
+
+## Reference
+
+Every export, grouped by subject. Wherever a number is expected you may pass a `Rational`, a BigInt, text such as `"1/3"` or `"0.05"`, or a JS number, which is read by its decimal form (`0.1` is one tenth).
+
+### Kinds of answer
+
+| Kind | What you get |
+
+| exact | A Rational. Finite probability, discrete distributions with rational parameters, statistics of exact data, exact tests. |
+
+| certified | A RationalInterval that contains the true value; { bits } sets its width. Continuous distributions, Poisson, square roots. |
+
+| simulated | An object with kind: "simulated", its seed, and its sampling error. |
+
+Arguments the library cannot work with are refused with a `StatsError` carrying a `code`, such as `bad-argument`, `domain`, `needs-exact`, `too-large`, `too-close` or `impossible-event`.
+
+### Numbers
+
+| Export | What it does |
+
+| toQ(v) | Any accepted number as a Rational. |
+
+| toValue(v) | A datum: a Rational, or a RationalInterval from [low, high], "1.2:1.4" or "1.5[+-0.1]". |
+
+| show(v, digits = 6) | Decimal text. For an enclosure, the digits both ends share, then …. |
+
+| compare(value, level) | "below", "above", "equal" or "too close to call". |
+
+| sqrt(v, bits = 96) | Exact for perfect squares, a certified enclosure otherwise. |
+
+| toNumber(v) | A JS number; the midpoint of an enclosure. |
+
+| StatsError | The error class, with code. |
+
+### Finite probability
+
+| Export | What it does |
+
+| finite(spec, weights?, { normalize }) | A Finite from equally likely outcomes, outcomes with weights, an object or Map, or a family from the discrete library. |
+
+| die(sides = 6), dice(n, sides = 6), coin(p = 1/2) | A die; n dice as tuples; a coin showing "H" with probability p. |
+
+| deck() | The 52 cards as text such as "Q♥", for draw. |
+
+| draw(items, k, { replace, ordered }) | Every way of drawing k of the items, equally likely. |
+
+| bayes(prior, likelihood) | { posterior, evidence, table }. |
+
+| Finite: p, prob, given | p(outcome); prob(event, given?); given(event), the conditional distribution. |
+
+| Finite: map, filter, product, power, plus, sumOf | The distribution of a function of the outcome; conditioning; independent pairs and tuples; the sum of two independent numbers, or of n copies. |
+
+| Finite: marginal, joint, independent | Coordinates of tuple outcomes; several functions at once; whether two events are independent, exactly. |
+
+| Finite: mean, expect, variance, sd, moment, covariance, correlation | Of the outcome or of functions of it. |
+
+| Finite: cdf, quantile, median, modes, support | For numeric outcomes. |
+
+| Finite: sample, samples, table, entries, outcomes, size | Seeded draws; rows { outcome, probability }. |
+
+### Discrete distributions
+
+| Export | What it does |
+
+| bernoulli(p), binomial(n, p) | One trial; successes in n trials. |
+
+| geometric(p, { failures }), negativeBinomial(r, p) | Trials to the first success (or failures before it); failures before the rth success. |
+
+| hypergeometric(N, K, n), discreteUniform(a, b) | Marked items in a draw without replacement; a whole number from a to b. |
+
+| poisson(lambda) | Certified; methods take { bits }. |
+
+| Discrete | pmf(k), cdf(k), sf(k), prob(a, b) for P(a≤X≤b), quantile(p), median(), mean, variance, sd(), mode, min, max, kind, sample(rng), samples(n, rng), toFinite(). |
+
+### Descriptive statistics
+
+| Export | What it does |
+
+| count, sum, mean, weightedMean(data, weights) | Exact; enclosures for interval data. |
+
+| variance(data, { population }), sd, moment(data, k, { central }) | Sample variance unless population. |
+
+| skewness, kurtosis(data, { excess }) | m3​/m23/2​ and m4​/m22​. |
+
+| min, max, range, median, quartiles, iqr, fiveNumber | Order statistics; quartiles is [q1, median, q3]. |
+
+| quantile(data, p, { method }) | linear, weibull, hazen, median-unbiased, inverse, lower, higher, nearest, midpoint. |
+
+| mad, trimmedMean(data, fraction) | Median absolute deviation; the mean after dropping a fraction from each end. |
+
+| frequencies, modes, histogram(data, { edges \| width, start \| bins }) | Counts by value and by class. |
+
+| covariance(x, y), correlation(x, y) | Sample covariance; Pearson's r. |
+
+| leastSquares(x, y) | { slope, intercept, r2, residuals, fitted, sse, sst, n, predict }. |
+
+| summary(data) | The usual summaries in one object, with outliers and modes. |
+
+| fast | Floating-point sum, mean, variance, sd, quantile, median, min, max, trimmedMean, covariance, correlation, leastSquares. |
+
+### Exact tests
+
+| Export | What it does |
+
+| binomialTest(k, n, p0 = 1/2, { alternative }) | A TestResult with interval(options). |
+
+| fisherTest([[a, b], [c, d]], { alternative }) | With oddsRatio. |
+
+| permutationTest(x, y, { statistic, alternative, paired, limit, resamples, seed }) | Exact when the deals can be counted, otherwise simulated with pValueInterval. |
+
+| proportionInterval(k, n, { level, method, bits }) | { low, high, level, method, estimate }; method exact, wilson or wald. |
+
+| TestResult | test, statistic, pValue, alternative, kind, decision(alpha), reject(alpha). Alternatives are "two-sided", "greater", "less". |
+
+### Continuous distributions
+
+| Export | What it does |
+
+| normal(mu = 0, sigma = 1), lognormal(mu, sigma) | |
+
+| gamma(shape, rate = 1), chiSquare(k), exponential(rate = 1), weibull(shape, scale = 1) | |
+
+| beta(a, b), studentT(df), fDist(d1, d2) | |
+
+| uniform(a = 0, b = 1), cauchy(location = 0, scale = 1) | |
+
+| Continuous | pdf(x), cdf(x), sf(x), prob(a, b), quantile(p), median(), each with { bits }; mean, variance, sd() (null where undefined); low, high (the support; null for infinite); fast.pdf, fast.cdf, fast.quantile; sample(rng), samples(n, rng), sampleExact(rng, { bits }), samplesExact(n, rng). |
+
+### Tests and estimation
+
+| Export | What it does |
+
+| zTest(data, { sigma, mu, alternative, bits }) | z test for a mean with known σ. |
+
+| tTest(x, [y], { mu, paired, equalVariance, alternative, bits }) | One-sample, paired, Welch (default) or pooled t test. |
+
+| meanInterval(data, { level, sigma, alternative, bits }) | t (or z) interval for a mean. |
+
+| varianceInterval(data, { level, bits }) | Chi-square interval for σ2; .sd holds the interval for σ. |
+
+| varianceTest(data, v0), fTest(x, y, { ratio }) | Chi-square test of one variance; F test of a ratio of two. |
+
+| proportionTest(k, n, p0, { correct }), proportionTest([k1, k2], [n1, n2]) | z test for one or two proportions, with Wilson or Wald intervals. |
+
+| chiSquareTest(observed \| table, { p, expected, estimated, correct }) | Goodness of fit, or independence in a contingency table (Yates' correction on 2×2 when asked). |
+
+| correlationTest(x, y) | t test of zero correlation; Fisher's z interval. |
+
+| fit(data, family, { method, trials }) | Maximum likelihood (default) or moments for normal, exponential, poisson, bernoulli, binomial, geometric, uniform, gamma, beta (moments), lognormal (likelihood). Returns params, method, kind and distribution. |
+
+| TestResult | statistic, statisticSquared (exact where possible), df, pValue (certified), alternative, estimate, null, standardError, interval({ level }), reject(alpha), decision(alpha). |
+
+| Interval | { low, high, level, estimate, method }; an open end is null. Ends are rounded outward from enclosures. |
+
+### Regression and analysis of variance
+
+| Export | What it does |
+
+| linearModel(x, y, { intercept = true, names }) | Least squares with exact coefficients. x is one column, an array of rows, or an object of named columns. Refuses with "collinear", naming the column. |
+
+| LinearModel | coefficients, fitted, residuals, sse, ssr, sst, rSquared, adjustedRSquared, variance, sigma, covariance, leverage, cooksDistance; coefficient(name), test(name, { value, alternative }), interval(name, { level }), table(), fTest(), predict(x), predictionInterval(x, { kind: "mean" \| "new" }), standardizedResiduals(). |
+
+| polyFit(x, y, degree) | Regression on x,x2,…. |
+
+| dummies(labels, { reference, name }) | Indicator columns, one per level but the reference. |
+
+| compareModels(small, big) | F test of nested models; checks the nesting exactly. |
+
+| anova(groups) | One-way analysis of variance: table, means, grandMean, etaSquared and the F test. |
+
+### Rank tests, Kolmogorov–Smirnov and the bootstrap
+
+| Export | What it does |
+
+| ranks(data) | Midranks and tie group sizes. |
+
+| signTest(x, y?, { mu, alternative }) | Exact, by the binomial law of the signs; zeros dropped. |
+
+| wilcoxonTest(x, y?, { mu, alternative, method, correct }) | Signed-rank test; method "auto" (exact up to n = 60), "exact" or "normal". Adds estimate (Hodges–Lehmann). |
+
+| mannWhitneyTest(x, y, { alternative, method, correct }) | U, the rank sum, exact counting with ties, and the Hodges–Lehmann shift. |
+
+| kruskalWallisTest(groups) | H exact with the tie correction; p from chi-square, certified. |
+
+| spearmanTest(x, y, …), kendallTest(x, y, …) | Rank correlations; exact p by enumeration (Spearman, n ≤ 9) or inversion counts (Kendall, no ties). |
+
+| ksTest(x, dist \| cdf \| y, { alternative, exactUpTo, resamples, seed }) | One sample against a Continuous or an exact cdf; two samples by counting lattice paths. |
+
+| kolmogorovCdf(n, d), kolmogorovTail(n, d), smirnovTail(n, d) | P(Dₙ
+| Export | What it does |
+
+| markovChain(matrix \| rows object, { states }) | A MarkovChain; every row must add up to 1 exactly. |
+
+| MarkovChain | p(a, b), power(n), distribution(start, n), classes() (closed, recurrent, period), isIrreducible(), isErgodic(), stationary(), absorption() (probabilities, steps, fundamental matrix), hitting(targets), meanReturnTime(state), simulate(start, steps, { seed }). |
+
+| betaPrior(a, b) | Beta belief for a probability; update({ successes, trials \| failures }) or a list of 0/1; predictive(m) beta-binomial. |
+
+| gammaPrior(shape, rate, { likelihood }) | Gamma belief for a rate, with Poisson counts or exponential times; predictive() negative binomial. |
+
+| normalPrior(mean, { variance \| sd, dataVariance \| dataSd }) | Normal belief for a mean with known data variance. |
+
+| dirichletPrior(alpha) | Dirichlet belief for category probabilities; marginal(category). |
+
+| Every belief | params, mean, variance, mode (exact), distribution, interval(level) (certified), cdf(x), history. |
+
+### Sampling, models and experiments
+
+| Export | What it does |
+
+| rng(seed), Random | The seeded generator of the discrete library: fork(label), int, bool, pick, shuffle, sample. |
+
+| model(spec), Model | Parts truth, x, noise, spread, contamination, xNoise, round, censor, missing, name. Methods with(changes), truthAt(x), sample(n, seed, { exact, bits }). |
+
+| Dataset | x, y, trueX, trueY, contaminated, censored, missing, seed, model, kind, n, complete(). |
+
+| howOften({ model, n \| draw, event, runs, seed, level }) | A SimulatedRate. |
+
+| coverage({ interval, truth, … }) | How often interval(data) contains the truth; adds meanWidth. |
+
+| rejectionRate({ test, alpha, … }) | How often test(data) rejects: size under the null, power otherwise. |
+
+| powerCurve({ effects, model \| draw, test, … }) | A rejection rate for each effect; model or draw is a function of the effect. |
+
+| estimatorStudy({ estimator, truth, … }) | A SimulatedEstimates: estimates, mean, sd, standardError, bias, rmse. |
+
+| SimulatedRate | rate, hits, runs, seed, interval { low, high, level }, compare(value). |
+
+| plan | The phases still to be built. |
+
+### Try it
+
+```js
+// Each kind of answer, and how to tell which one you have.
+const answers = {
+  "binomial(10, 1/3).cdf(4)":      binomial(10, "1/3").cdf(4),
+  "variance([1, 2, 4])":           variance([1, 2, 4]),
+  "sd([1, 2, 4])":                 sd([1, 2, 4]),
+  "normal().cdf(1)":               normal().cdf(1),
+  "uniform(0, 4).cdf(1)":          uniform(0, 4).cdf(1),
+  "poisson(2).pmf(0)":             poisson(2).pmf(0),
+};
+for (const [text, v] of Object.entries(answers)) {
+  const kind = v instanceof RationalInterval ? "certified" : "exact";
+  PRINT(text.padEnd(26), kind.padEnd(10), kind === "exact" ? String(v) : show(v, 15));
+}
+// What is still planned:
+for (const p of plan) PRINT(`phase ${p.phase}: ${p.contents}`);
+plan.length
+```
+
+---
+
+Page: https://ratmath.com/stats/explore.html
+
+Explore
+
+## Explore
+
+A distribution calculator that prints only digits it can certify, exact summaries of data you type, and an experiment: choose how dirty the data are and see which estimator copes.
+
+### A distribution
+
+Distribution
+Parameters
+x
+p
+Digits
+
+Parameters are exact: type `1/3` or `0.05`. Raise the digits and the precision follows.
+
+### Your data
+
+Numbers separated by commas or spaces. Fractions such as `7/2` are welcome.
+
+### Two columns: compare, or fit a line
+
+x
+y
+
+As two samples, the columns get Welch's t test and the F test for equal variances (and the paired t test, when they have the same length). As pairs, they get the least squares line with exact coefficients, the slope's 95% interval and the correlation test. See [tests for means](https://ratmath.com/stats/means.html) and [linear regression](https://ratmath.com/stats/regression.html).
+
+### An experiment
+
+Sample size
+Contamination rate
+Contamination sd
+Runs
+Seed
+
+The truth is 10 and the clean noise is normal with standard deviation 1. A share of the observations, set by the slider, get noise with the larger standard deviation instead. The table shows each estimator's root mean squared error, and how often the usual t interval contains the truth.
+
+### Try it
+
+```js
+// The page above, as code.
+PRINT("P(Z ≤ 1.96) =", show(normal(0, 1).cdf("1.96"), 20));
+PRINT("97.5% point =", show(normal(0, 1).quantile("0.975"), 20));
+
+const data = [2, 4, 4, 4, 5, 5, 7, 9, 21];
+const s = summary(data);
+PRINT("mean", String(s.mean), " median", String(s.median), " sd", show(s.sd, 6), " outliers", s.outliers.join(", "));
+
+const dirty = model({ truth: 10, noise: normal(0, 1), contamination: { rate: 0.1, noise: normal(0, 10) } });
+for (const [name, f] of [["mean", fast.mean], ["median", fast.median]]) {
+  const study = estimatorStudy({ model: dirty, n: 25, estimator: (d) => f(d.y), truth: 10, runs: 1000, seed: 1 });
+  PRINT(name.padEnd(7), "rmse", study.rmse.toFixed(3));
+}
+```
+
+---
+
+Page: https://ratmath.com/stats/finite-probability.html
+
+Exact
+
+## Finite probability
+
+A finite distribution is a list of outcomes with a fraction for each. Events are functions of the outcome, and probabilities, conditional probabilities and expectations are sums of fractions, with nothing rounded.
+
+### Sample spaces
+
+```js
+import { finite, die, dice, coin, deck, draw, bayes } from "@ratmath/stats";
+
+const two = dice(2);                           // 36 outcomes, each a pair [a, b]
+two.prob(([a, b]) => a + b === 7);             // 1/6
+two.prob(([a, b]) => a + b >= 10, ([a]) => a === 6);   // 1/2: given that the first die shows 6
+
+String(coin("2/3"));                           // "{ H: 2/3, T: 1/3 }"
+String(finite(["a", "b", "b"]));               // "{ a: 1/3, b: 2/3 }": repeats count each time
+String(finite({ red: "1/2", green: "1/3", blue: "1/6" }));
+```
+
+`finite` takes a list of equally likely outcomes, a list with weights, an object or a `Map` of probabilities, or a family from the discrete library (every permutation, every subset, and so on). Probabilities that do not add up to 1 are refused unless you pass `{ normalize: true }`.
+
+An outcome can be a number, text, or a list of these. An event is a function from the outcome to true or false, a single outcome, or a `Set` of outcomes.
+
+### New distributions from old
+
+```js
+const sum = two.map(([a, b]) => a + b);        // the distribution of the total
+String(sum);    // "{ 2: 1/36, 3: 1/18, 4: 1/12, 5: 1/9, 6: 5/36, 7: 1/6, 8: 5/36, … }"
+
+die().sumOf(3).prob((s) => s >= 16);           // 5/108, without listing the 216 triples
+two.given(([a, b]) => a !== b);                // the distribution after conditioning
+die().product(coin());                         // pairs [face, side], independent
+draw(deck(), 2).size;                          // 1326 two-card hands, each equally likely
+```
+
+`map` sends each outcome through a function and adds up the probabilities that land together: that is the distribution of a random variable. `given` keeps the outcomes of an event and divides by its probability,
+
+P(A∣B)=P(B)P(A∩B)​,
+and refuses when P(B)=0. `draw(items, k)` lists hands of k distinct items; with `{ ordered: true }` the order drawn matters, and with `{ replace: true, ordered: true }` items are put back. A finite distribution lists its outcomes, so it is limited to two million of them; for five-card hands, count with [`hypergeometric`](https://ratmath.com/stats/discrete-distributions.html) instead of listing.
+
+### Expectation and spread
+
+```js
+two.mean(([a, b]) => a + b);                   // 7
+two.variance(([a, b]) => a + b);               // 35/6
+show(two.sd(([a, b]) => a + b), 10);           // "2.4152294577": a square root, so certified
+two.independent(([a]) => a % 2 === 0, ([a, b]) => a + b === 7);   // true
+sum.quantile("9/10");                          // 10
+```
+
+The mean of f is ∑ω​f(ω)P(ω) and the variance is E[f2]−E[f]2, both exact. A standard deviation is exact when the variance is a perfect square and an enclosure otherwise. Two events are independent when P(A∩B)=P(A)P(B) holds as an equation between fractions, which floating point cannot check.
+
+### Bayes' rule
+
+```js
+// 1 person in 100 has the condition; the test is right 95 times in 100 either way
+const b = bayes({ sick: "1/100", well: "99/100" }, { sick: "95/100", well: "5/100" });
+String(b.posterior);      // "{ sick: 19/118, well: 99/118 }"
+b.evidence;               // 59/1000: the chance of a positive result
+```
+
+For hypotheses Hi​ with priors P(Hi​) and an observation D,
+
+P(Hi​∣D)=∑j​P(D∣Hj​)P(Hj​)P(D∣Hi​)P(Hi​)​.
+The denominator is `evidence`, and `table` has one row per hypothesis with its prior, likelihood, joint probability and posterior. The posterior is a finite distribution, so it can be the prior of the next update.
+
+### Try it
+
+```js
+// The birthday problem, exactly, and a posterior updated twice.
+const noMatch = (n) => {
+  let p = new Rational(1);
+  for (let i = 0; i < n; i++) p = p.multiply(new Rational(365 - i, 365));
+  return p;
+};
+PRINT("23 people, some shared birthday:", show(new Rational(1).subtract(noMatch(23)), 6));
+
+// Two positive tests in a row.
+const likelihood = { sick: "95/100", well: "5/100" };
+const first = bayes({ sick: "1/100", well: "99/100" }, likelihood);
+const second = bayes(first.posterior, likelihood);
+PRINT("after one positive: ", String(first.posterior));
+PRINT("after two positives:", String(second.posterior));
+
+// Three dice: which total is most likely, and how likely?
+const total = die().sumOf(3);
+PRINT("modes:", total.modes().join(" and "), "each with probability", String(total.p(10)));
+total.prob((s) => s >= 16)
+```
+
+---
+
+Page: https://ratmath.com/stats/discrete-distributions.html
+
+Exact
+
+## Discrete distributions
+
+The named distributions on whole numbers. With rational parameters every probability of the binomial, geometric, negative binomial, hypergeometric and uniform distributions is a fraction. The Poisson distribution involves e−λ, so its probabilities are certified enclosures.
+
+### Using one
+
+```js
+import { binomial, hypergeometric, geometric, negativeBinomial, poisson, show } from "@ratmath/stats";
+
+const X = binomial(10, "1/3");
+X.pmf(4);              // 4480/19683     P(X = 4)
+X.cdf(4);              // 15488/19683    P(X ≤ 4)
+X.sf(4);               // 4195/19683     P(X > 4)
+X.prob(2, 5);          // 1792/2187      P(2 ≤ X ≤ 5)
+X.quantile("0.9");     // 5              the least k with P(X ≤ k) ≥ 0.9
+X.mean;                // 10/3
+X.variance;            // 20/9
+show(X.sd(), 12);      // "1.490711985000"
+X.kind;                // "exact"
+```
+
+Parameters are read exactly: `"1/3"` is a third, and the JS number `0.1` is read by its decimal form as one tenth. `toFinite()` turns a distribution with finitely many values into a [finite distribution](https://ratmath.com/stats/finite-probability.html), and `sample(rng)` draws from a [seeded generator](https://ratmath.com/stats/sampling.html).
+
+### The family
+
+| Constructor | Counts | P(X=k) | Mean, variance |
+
+| bernoulli(p) | one trial | pk(1−p)1−k | p, p(1−p) |
+
+| binomial(n, p) | successes in n trials | (kn​)pk(1−p)n−k | np, np(1−p) |
+
+| geometric(p) | trials up to the first success | (1−p)k−1p | 1/p, (1−p)/p2 |
+
+| negativeBinomial(r, p) | failures before the rth success | (kk+r−1​)pr(1−p)k | r(1−p)/p, r(1−p)/p2 |
+
+| hypergeometric(N, K, n) | marked items among n drawn from N with K marked | (kK​)(n−kN−K​)/(nN​) | nK/N, and the finite-population variance |
+
+| discreteUniform(a, b) | a whole number from a to b | 1/(b−a+1) | (a+b)/2, ((b−a+1)2−1)/12 |
+
+| poisson(λ) | events at rate λ | e−λλk/k! | λ, λ |
+
+`geometric(p, { failures: true })` counts failures before the first success instead, starting at 0.
+
+### Poisson is certified
+
+```js
+const N = poisson(3);
+N.kind;                          // "certified"
+show(N.pmf(2), 20);              // "0.22404180765538774341"
+show(N.cdf(5), 15);              // "0.916082057968697"
+N.quantile("0.99");              // 8: a whole number, decided for certain
+N.pmf(2, { bits: 200 });         // the same enclosure, about 60 digits wide
+```
+
+e−3 is irrational, so `pmf` returns a `RationalInterval` that contains the true value; `{ bits }` sets how narrow. A quantile is still an exact whole number: the library raises the precision until the cumulative sums are separated from the level.
+
+### Try it
+
+```js
+// Cards: the chance of exactly two aces in a five-card hand, and of at least one.
+const aces = hypergeometric(52, 4, 5);
+PRINT("two aces:        ", String(aces.pmf(2)), "=", show(aces.pmf(2), 6));
+PRINT("at least one ace:", String(aces.sf(0)));
+
+// The Poisson limit: binomial(n, 3/n) approaches poisson(3). Watch P(X = 2) close in.
+const target = poisson(3).pmf(2);
+for (const n of [10, 100, 1000, 10000]) {
+  PRINT(`n = ${n}:`.padEnd(11), show(binomial(n, new Rational(3, n)).pmf(2), 10));
+}
+PRINT("poisson(3):", show(target, 10));
+
+// How many rolls until a six, with 90% certainty?
+geometric("1/6").quantile("0.9")
+```
+
+---
+
+Page: https://ratmath.com/stats/descriptive.html
+
+Exact
+
+## Descriptive statistics
+
+Summaries of a list of numbers, computed in fractions. Data typed as decimals are read as the decimals they are, so the mean of 0.1, 0.2 and 0.3 is exactly 1/5. Data given as intervals (a measurement with its uncertainty) give enclosures.
+
+### Centre and spread
+
+```js
+import { mean, variance, sd, median, quartiles, iqr, mad, trimmedMean, skewness, kurtosis, summary, show } from "@ratmath/stats";
+
+const data = [2, 4, 4, 4, 5, 5, 7, 9];
+mean(data);                              // 5
+variance(data);                          // 32/7   (divides by n − 1)
+variance(data, { population: true });    // 4      (divides by n)
+sd(data, { population: true });          // 2: exact, because 4 is a perfect square
+show(sd(data), 12);                      // "2.138089935299": certified otherwise
+median(data);                            // 9/2
+iqr(data);                               // 3/2
+mad(data);                               // 1/2: the median distance from the median
+trimmedMean(data, "1/8");                // 29/6: drop an eighth from each end
+mean([0.1, 0.2, 0.3]);                   // 1/5
+```
+
+The sample variance is s2=n−11​∑(xi​−xˉ)2. Skewness is m3​/m23/2​ and kurtosis m4​/m22​ with mk​=n1​∑(xi​−xˉ)k; kurtosis is a fraction, and skewness is exact when m2​ is a perfect square. `summary(data)` collects the count, mean, five-number summary, variance, standard deviation, modes and the outliers beyond 1.5 interquartile ranges.
+
+### Quantiles have rules
+
+There is no single definition of a sample quantile, and packages disagree. Here the rule has a name.
+
+```js
+import { quantile } from "@ratmath/stats";
+
+quantile(data, "0.9");                         // 38/5   "linear": the usual default
+quantile(data, "0.9", { method: "hazen" });    // 42/5
+quantile(data, "0.9", { method: "lower" });    // 7: always one of the data values
+```
+
+| method | Position among the sorted values x1​≤⋯≤xn​ |
+
+| linear | 1+(n−1)p, interpolated. The default of most software. |
+
+| weibull | (n+1)p, interpolated |
+
+| hazen | np+21​, interpolated |
+
+| median-unbiased | (n+31​)p+31​, interpolated |
+
+| inverse | the least value whose cumulative proportion reaches p |
+
+| lower, higher, nearest, midpoint | the linear position, moved to a data value below, above or nearest, or the midpoint of the two |
+
+### Counts
+
+```js
+import { frequencies, modes, histogram } from "@ratmath/stats";
+
+frequencies(data);      // rows { value, count, proportion, cumulative }
+modes(data);            // [4]
+histogram(data, { width: 2, start: 2 });
+// rows { from, to, count, proportion, density } for [2, 4), [4, 6), [6, 8), [8, 10]
+```
+
+### Two variables
+
+```js
+import { covariance, correlation, leastSquares } from "@ratmath/stats";
+
+const x = [1, 2, 3, 4, 5];
+const y = [2, 4, 5, 4, 5];
+covariance(x, y);                    // 3/2
+show(correlation(x, y), 12);         // "0.774596669241"
+const fit = leastSquares(x, y);
+fit.slope;                           // 3/5
+fit.intercept;                       // 11/5
+fit.r2;                              // 3/5
+fit.predict(6);                      // 29/5
+fit.residuals.map(String);           // ["-4/5", "3/5", "1", "-3/5", "-1/5"]
+```
+
+The least-squares line minimises ∑(yi​−a−bxi​)2; its slope is b=sxy​/sxx​ and it passes through (xˉ,yˉ​). In fractions the residuals add up to exactly zero, which is a check you can run. Regression with several predictors, and the inference that goes with it, is the planned phase 5.
+
+### Measurements with uncertainty
+
+```js
+String(mean(["1.2:1.4", "2.0:2.2", 3]));       // "31/15:11/5": every possible mean lies in here
+show(mean(["1.5[+-0.1]", "2.5[+-0.1]"]), 6);   // "2.0…"
+```
+
+An interval datum means "somewhere in here". Sums and means are enclosures of every value the statistic could take. Order statistics of overlapping intervals are not defined, so quantiles need exact data.
+
+### The fast side
+
+`fast.mean`, `fast.sd`, `fast.median`, `fast.quantile`, `fast.trimmedMean`, `fast.correlation`, `fast.leastSquares` and the rest do the same in floating point on plain numbers. They are for [simulations](https://ratmath.com/stats/experiments.html), where a statistic is computed thousands of times on random data and the last digit carries no meaning.
+
+### Try it
+
+```js
+// Anscombe's first two data sets: the same summaries, exactly the same line.
+const x  = [10, 8, 13, 9, 11, 14, 6, 4, 12, 7, 5];
+const y1 = [8.04, 6.95, 7.58, 8.81, 8.33, 9.96, 7.24, 4.26, 10.84, 4.82, 5.68];
+const y2 = [9.14, 8.14, 8.74, 8.77, 9.26, 8.10, 6.13, 3.10, 9.13, 7.26, 4.74];
+
+for (const [name, y] of [["first", y1], ["second", y2]]) {
+  const fit = leastSquares(x, y);
+  PRINT(`${name}: mean ${show(mean(y), 4)}, variance ${show(variance(y), 4)}, line ${show(fit.intercept, 4)} + ${show(fit.slope, 4)}·x, r² ${show(fit.r2, 4)}`);
+}
+// To four places they agree. Exactly, they do not:
+PRINT("slopes:", String(leastSquares(x, y1).slope), "and", String(leastSquares(x, y2).slope));
+
+// The residuals of an exact fit add up to exactly zero.
+String(sum(leastSquares(x, y1).residuals))
+```
+
+---
+
+Page: https://ratmath.com/stats/exact-tests.html
+
+Exact
+
+## Exact tests
+
+Tests whose null distribution is finite, so the p-value is a fraction found by counting. No normal approximation, and no minimum sample size.
+
+### The binomial test
+
+```js
+import { binomialTest, proportionInterval, show } from "@ratmath/stats";
+
+const t = binomialTest(14, 20, "1/2");       // 14 successes in 20 trials; is p = 1/2?
+String(t);              // "exact binomial test: p = 0.115318 (exact, two-sided)"
+t.pValue;               // 15115/131072
+t.decision("0.05");     // "keep"
+t.reject("0.05");       // false
+binomialTest(14, 20, "1/2", { alternative: "greater" }).pValue;   // 15115/262144
+```
+
+Under H0​ the count is binomial(n,p0​). The one-sided p-values are tail sums. The two-sided p-value adds the probability of every count that is no more likely than the one observed,
+
+p=k:P(k)≤P(kobs​)∑​P(k),
+which is exact for any p0​, symmetric or not. Comparing fractions for "no more likely" is exact here; in floating point, ties are decided by rounding error.
+
+### An interval for a proportion
+
+```js
+const ci = proportionInterval(14, 20);       // Clopper and Pearson's interval, 95%
+show(ci.low, 6);        // "0.457211"
+show(ci.high, 6);       // "0.881068"
+proportionInterval(14, 20, { method: "wilson" });   // 0.481027 to 0.854523
+proportionInterval(14, 20, { method: "wald", level: "0.99" });   // 0.4361 to 0.9639
+```
+
+The "exact" interval is the set of p0​ that the two one-sided binomial tests do not reject at α/2 each. Its ends are quantiles of beta distributions,
+
+low=B−1(2α​;k,n−k+1),high=B−1(1−2α​;k+1,n−k),
+which are [certified](https://ratmath.com/stats/certified-answers.html) and rounded outward, so the interval's coverage is never below its level. Wilson's interval and the textbook Wald interval p^​±zp^​(1−p^​)/n​ are offered for comparison; the [experiments](https://ratmath.com/stats/experiments.html) page measures how often each contains the truth.
+
+### Fisher's exact test
+
+```js
+import { fisherTest } from "@ratmath/stats";
+
+const f = fisherTest([[3, 1], [1, 3]]);
+f.pValue;               // 17/35
+f.oddsRatio;            // 9
+fisherTest([[3, 1], [1, 3]], { alternative: "greater" }).pValue;   // 17/70
+```
+
+With the row and column totals of a 2 by 2 table held fixed, the top-left count is hypergeometric when the rows and columns are unrelated. The p-value adds up the tables that are no more likely than the one observed.
+
+### Permutation tests
+
+```js
+import { permutationTest } from "@ratmath/stats";
+
+const p = permutationTest([12, 15, 11, 18, 14], [9, 10, 13, 8, 11]);
+p.pValue;               // 1/21: of the 252 ways to deal ten values into two fives
+p.kind;                 // "exact"
+permutationTest([12, 15, 11, 18, 14], [9, 10, 13, 8, 11], { paired: true }).pValue;   // 1/8
+permutationTest(x, y, { statistic: "median" });
+```
+
+If two groups do not differ, every way of dealing the pooled values into groups of these sizes is equally likely. The p-value is the fraction of deals whose difference in means (or medians, or any statistic you pass) is at least as extreme as the one observed. With `{ paired: true }` the deals are the 2n ways of swapping within pairs.
+
+When there are more deals than `limit` (200,000 unless you say otherwise), the test draws `resamples` random deals from `seed` instead. Then the result's `kind` is `"simulated"`, and `pValueInterval` is an exact interval for the p-value it estimates. A result never changes kind silently.
+
+### Try it
+
+```js
+// The lady tasting tea: eight cups, four with milk first. She names which four.
+// How many must she get right for the result to be convincing?
+for (let right = 2; right <= 4; right++) {
+  const table = [[right, 4 - right], [4 - right, right]];
+  const t = fisherTest(table, { alternative: "greater" });
+  PRINT(`${right} of 4 right: p = ${t.pValue}`, `(${t.decision("0.05")})`);
+}
+
+// A permutation test small enough to count, then one that must be simulated.
+const small = permutationTest([12, 15, 11, 18, 14], [9, 10, 13, 8, 11]);
+PRINT(String(small), "from", String(small.arrangements), "deals");
+
+const a = Array.from({ length: 20 }, (_, i) => 2 + i * 1.1);
+const b = Array.from({ length: 20 }, (_, i) => i);
+const large = permutationTest(a, b, { seed: 3 });
+PRINT(String(large));
+PRINT("the p-value is between", show(large.pValueInterval.low, 4), "and", show(large.pValueInterval.high, 4));
+large.decision("0.05")
+```
+
+---
+
+Page: https://ratmath.com/stats/continuous-distributions.html
+
+Certified
+
+## Continuous distributions
+
+The distributions behind the tables at the back of a statistics book, without the tables. A probability or a quantile is an enclosure: two rationals with the true value between them, as close together as you ask.
+
+### Using one
+
+```js
+import { normal, studentT, chiSquare, show } from "@ratmath/stats";
+
+const Z = normal();                       // mean 0, standard deviation 1
+show(Z.cdf("1.96"), 20);                  // "0.97500210485177956586"   P(Z ≤ 1.96)
+show(Z.sf(6), 15);                        // "0.000000000986588"        P(Z > 6)
+show(Z.prob(-1, 1), 15);                  // "0.682689492137086"
+show(Z.pdf(0), 15);                       // "0.398942280401433"        1/√(2π)
+show(Z.quantile("0.975"), 18);            // "1.95996398454005424…"
+
+show(studentT(9).quantile("0.975"), 15);  // "2.262157162798206"
+show(chiSquare(4).sf("9.488"), 12);       // "0.049994405578"
+show(normal(100, 15).sf(130), 12);        // "0.022750131948"
+```
+
+Each method takes `{ bits }`: 96 for values and 64 for quantiles unless you say otherwise, and as many as you like.
+
+```js
+show(Z.cdf("1.96", { bits: 160 }), 40);        // "0.9750021048517795658634157309591628099775"
+show(Z.quantile("0.975", { bits: 200 }), 50);  // "1.95996398454005423552459443052055152795555007786955"
+```
+
+Where an exact answer exists it is returned as a fraction: `uniform(0, 4).cdf(1)` is `1/4`, a mean such as `gamma(3, 2).mean` is `3/2`, and `studentT(9).variance` is `9/7`. A moment that does not exist is `null`: `cauchy().mean`.
+
+### The family
+
+| Constructor | Density on its support | Distribution function, through |
+
+| normal(μ, σ) | σ2π​1​e−(x−μ)2/2σ2 | the error function |
+
+| lognormal(μ, σ) | logX is normal | the error function of logx |
+
+| gamma(shape, rate) | Γ(α)βα​xα−1e−βx, x>0 | P(α,βx), the incomplete gamma function |
+
+| chiSquare(k) | gamma with shape k/2, rate 1/2 | P(k/2,x/2) |
+
+| exponential(rate) | λe−λx, x>0 | 1−e−λx |
+
+| weibull(shape, scale) | sk​(x/s)k−1e−(x/s)k, x>0 | 1−e−(x/s)k |
+
+| beta(a, b) | B(a,b)xa−1(1−x)b−1​, 0 | Ix​(a,b), the incomplete beta function |
+
+| studentT(df) | ∝(1+t2/ν)−(ν+1)/2 | Ix​(ν/2,1/2) with x=ν/(ν+t2) |
+
+| fDist(d1, d2) | ratio of two scaled chi-squares | Ix​(d1​/2,d2​/2) with x=d1​f/(d1​f+d2​) |
+
+| uniform(a, b) | 1/(b−a), a | exact |
+
+| cauchy(location, scale) | πs(1+((x−x0​)/s)2)1​ | the arctangent |
+
+The incomplete gamma and beta functions are certified in the analytic library: a series of positive terms is added with every operation rounded outward, and the tail that is left off is bounded by a geometric series and added to the upper end.
+
+### Quantiles
+
+A quantile is the x where the distribution function crosses a level p. The library starts from a floating-point guess, brackets it between two rationals a with F(a) both certified, and narrows the bracket with secant steps. Because every sign is certified, the result is an enclosure of the true quantile, whatever the guess was. See [Certified answers](https://ratmath.com/stats/certified-answers.html).
+
+### The fast side
+
+```js
+Z.fast.cdf(1.96);          // 0.9750021048517794
+Z.fast.quantile(0.975);    // 1.9599639845400538
+Z.fast.pdf(0);             // 0.3989422804014327
+```
+
+Every distribution has floating-point versions under `fast`, for plotting and for simulations. They are accurate to roughly twelve digits or better and make no promise beyond that; the certified methods are the ones to quote.
+
+### Try it
+
+```js
+// The critical values a textbook prints, to more places than it prints them.
+PRINT("z, 95% two-sided:      ", show(normal().quantile("0.975"), 12));
+PRINT("t with 9 df:           ", show(studentT(9).quantile("0.975"), 12));
+PRINT("chi-square with 4 df:  ", show(chiSquare(4).quantile("0.95"), 12));
+PRINT("F with 3 and 20 df:    ", show(fDist(3, 20).quantile("0.95"), 12));
+
+// The 68, 95, 99.7 rule is a rounding. Here is what it rounds.
+for (const k of [1, 2, 3]) PRINT(`within ${k} sd:`, show(normal().prob(-k, k), 12));
+
+// Student's t approaches the normal: the 97.5% point as the degrees of freedom grow.
+for (const df of [2, 5, 30, 1000]) PRINT(`df ${df}:`.padEnd(9), show(studentT(df).quantile("0.975"), 8));
+
+// Fifty digits, because you can.
+show(normal().quantile("0.975", { bits: 200 }), 50)
+```
+
+---
+
+Page: https://ratmath.com/stats/certified-answers.html
+
+Certified
+
+## Certified answers
+
+A certified answer is a `RationalInterval`: two fractions with the true value between them. This page says how to read one, how to make it narrower, and what happens when a decision depends on a value that sits on the boundary.
+
+### Reading an enclosure
+
+```js
+import { normal, show, toNumber, compare } from "@ratmath/stats";
+
+const p = normal().sf("1.96");
+p.low; p.high;            // the two rationals; the true value is between them
+show(p, 20);              // "0.02499789514822043414": the digits both ends share
+show(p, 40);              // "0.0249978951482204341365842690408…": shared digits, then "…"
+toNumber(p);              // 0.024997895148220435: the midpoint, as a JS number
+```
+
+`show(value, digits)` prints a fraction rounded to that many places. For an enclosure it prints the digits on which both ends agree, and marks with `…` the place where they stop agreeing. Digits it prints are digits of the true value's enclosure, not of a floating-point estimate.
+
+### Precision on request
+
+```js
+const narrow = normal().sf("1.96", { bits: 300 });
+show(narrow, 80);
+// "0.02499789514822043413658426904083719002249977906188339108571710412881842600366650"
+```
+
+`bits` is a target for the width: about 2−bits. The work grows with the precision, and there is no limit built in.
+
+### Comparisons that do not guess
+
+```js
+compare(normal().sf("1.96"), "0.025");               // "below": certainly less than 0.025
+compare(normal().sf("1.95"), "0.025");               // "above"
+
+// a p-value computed to only 30 bits, right at the boundary
+const z = normal().quantile("0.975", { bits: 20 });  // an enclosure of 1.95996…
+compare(normal().sf(z, { bits: 30 }), "0.025");      // "too close to call"
+```
+
+`compare(value, level)` answers `"below"` when the whole enclosure is below the level, `"above"` when it is all above, and `"too close to call"` when the level is inside. For an exact value it can also answer `"equal"`. A test result's `decision(alpha)` uses the same rule and returns `"reject"`, `"keep"` or `"too close to call"`; `reject(alpha)` returns true or false and refuses in the third case, telling you to ask for more precision.
+
+In floating point a p-value of 0.05000000000000001 and one of 0.04999999999999999 may be the same number with different rounding. Here the question "is p?" has an honest third answer, and more bits will usually resolve it.
+
+### How a quantile is enclosed
+
+For an increasing distribution function F and a level p, the quantile is the x with F(x)=p. The solver keeps two rationals a with
+
+F(a)
+where each inequality has been certified: the enclosure of F(a) lies entirely below p. Since F is increasing, the quantile is between a and b. Secant steps (with bisection when progress stalls) move the ends together until b−a is about 2−bits times the size of the answer. To decide a sign near the crossing the enclosure of F must be narrower than its distance from p, so the working precision rises as the bracket closes.
+
+The floating-point guess only sets where the search starts. A bad guess costs time and cannot cost correctness.
+
+### Where exact answers come back
+
+Certified does not mean always an interval. `exponential(2).quantile("1/2")` is an enclosure of 21​ln2, but `uniform(0, 4).quantile("1/4")` is the fraction 1. Standard deviations are exact when the variance is a perfect square. Discrete quantiles are whole numbers. The library returns a fraction whenever it has one.
+
+### Try it
+
+```js
+// A p-value on the boundary, resolved by asking for more.
+// The chi-square statistic 3.841458820694124 is the 5% point to 16 figures. Which side is it on?
+const stat = "3.841458820694124";
+for (const bits of [20, 40, 60, 80]) {
+  const p = chiSquare(1).sf(stat, { bits });
+  PRINT(`${bits} bits:`.padEnd(9), show(p, 24).padEnd(28), compare(p, "0.05"));
+}
+
+// An enclosure is two fractions. Their difference is the whole uncertainty.
+const q = normal().quantile("0.975", { bits: 100 });
+PRINT("width of the quantile:", q.high.subtract(q.low).toNumber());
+
+// Check it against its definition: F(low) ≤ 0.975 ≤ F(high), certified.
+const below = compare(normal().cdf(q.low, { bits: 160 }), "0.975");
+const above = compare(normal().cdf(q.high, { bits: 160 }), "0.975");
+[below, above]
+```
+
+---
+
+Page: https://ratmath.com/stats/sampling.html
+
+Simulated
+
+## Seeded sampling
+
+Every random number in this library comes from a generator you seed. The same seed gives the same numbers on every machine, so a simulated result can be quoted with its seed and checked by anyone.
+
+### The generator
+
+```js
+import { rng, normal, binomial, die } from "@ratmath/stats";
+
+const r = rng(7);                        // a seed: a number or text
+normal().samples(3, r);                  // [-0.2867212522343773, 0.890397962977404, -0.6748667246228445]
+normal().samples(3, rng(7));             // the same three numbers
+binomial(10, "1/3").samples(8, rng(1));  // [4, 3, 2, 4, 4, 4, 5, 4]
+die().samples(8, rng(1));                // [5, 3, 1, 3, 1, 3, 3, 6]
+```
+
+`rng` is the generator of the discrete library, exported again here. Its integer draws are exact (no modulo bias), and it has `int`, `bool(p)` with an exact probability, `pick`, `shuffle` and `sample`. Every distribution in this library has `sample(rng)` for one draw and `samples(n, rng)` for a list.
+
+### Streams with names
+
+```js
+const base = rng("my study");
+const a = base.fork("noise");            // an independent stream
+const b = base.fork("x values");         // another; neither disturbs the other or base
+```
+
+`fork(label)` derives a new generator from the seed and the label without advancing the parent. This is how simulations stay comparable. If one generator fed everything in turn, drawing one extra number early on would change every number after it. With a stream for each purpose, changing the noise leaves the x values alone. [Models](https://ratmath.com/stats/models.html) use a stream for each part, and [experiments](https://ratmath.com/stats/experiments.html) use a stream for each run, so run 17 is the same data whether you ask for 20 runs or 2,000.
+
+### How the draws are made
+
+A continuous draw starts from a uniform number U on (0,1) with 53 random bits. The normal distribution uses a pair of uniforms (the polar method), the gamma family uses Marsaglia and Tsang's method, and the rest push U through the quantile function: if F is the distribution function then F−1(U) has distribution F. Discrete draws walk the cumulative sums, or add up exact Bernoulli trials.
+
+These draws are floating-point numbers. That is the right tool for a simulation of a thousand runs, and it is why simulated results are labelled as such.
+
+### Exact draws
+
+```js
+normal().samplesExact(2, rng(7)).map(String);
+// ["-39406668679/137438953472", "-24665190495/68719476736"]
+```
+
+`sampleExact(rng, { bits })` returns a fraction: a uniform fraction with `bits` random bits is pushed through the [certified quantile](https://ratmath.com/stats/certified-answers.html), and the result is rounded to a fraction within 2−bits of it, relative to its size. It is much slower, and it gives data whose exact statistics (a mean as a fraction, an exact permutation test) are the same on every machine and in every language that implements the same rule.
+
+### Try it
+
+```js
+// Same seed, same numbers. Different labels, unrelated numbers.
+PRINT("seed 7:      ", normal().samples(3, rng(7)).map((v) => v.toFixed(4)).join("  "));
+PRINT("seed 7 again:", normal().samples(3, rng(7)).map((v) => v.toFixed(4)).join("  "));
+PRINT("fork a:      ", normal().samples(3, rng(7).fork("a")).map((v) => v.toFixed(4)).join("  "));
+PRINT("fork b:      ", normal().samples(3, rng(7).fork("b")).map((v) => v.toFixed(4)).join("  "));
+
+// Do the draws look like the distribution? Compare sample quantiles with certified ones.
+const draws = gamma(3, 2).samples(20000, rng("check"));
+for (const p of [0.1, 0.5, 0.9]) {
+  PRINT(`${p * 100}% point: sample ${fast.quantile(draws, p).toFixed(4)}, true ${show(gamma(3, 2).quantile(p), 4)}`);
+}
+
+// Exact draws make exact statistics: the mean of five, as a fraction.
+String(mean(exponential(1).samplesExact(5, rng(2), { bits: 16 })))
+```
+
+---
+
+Page: https://ratmath.com/stats/models.html
+
+Simulated
+
+## Models with noise
+
+Choose the truth. Say how observations depart from it. Draw data, hand the data to a procedure, and see whether it finds the truth you chose. Real data never come with the answer attached; these do.
+
+### A truth and its noise
+
+```js
+import { model, normal, uniform, fast } from "@ratmath/stats";
+
+const line = model({
+  truth: [2, 0.5],              // y = 2 + 0.5·x
+  x: uniform(0, 10),            // where the x values come from
+  noise: normal(0, 1),          // added to each observation
+});
+String(line);     // "model(truth 2 + 0.5·x; x from uniform(0, 10); noise normal(0, 1))"
+
+const data = line.sample(50, 42);         // 50 observations, seed 42
+String(data);
+// "50 simulated observations from model(…) (seed 42; 0 contaminated, 0 censored, 0 missing)"
+data.x; data.y;                           // what was observed
+data.trueY;                               // the truth at each x, before the noise
+fast.leastSquares(data.x, data.y).slope;  // 0.4197866209598898: one estimate of 0.5
+```
+
+`truth` is a number (every observation has this value, before noise), a list of coefficients b0​,b1​,… of the polynomial b0​+b1​x+⋯, or any function of x. `x` is a list that is reused in order (a fixed design), a distribution, or a function of the generator; leave it out for a model with no predictor.
+
+The data set remembers where it came from: `kind` is `"simulated"`, and `seed` and `model` reproduce it.
+
+### Departures
+
+| Part | What it does | What it tests |
+
+| noise | a distribution added to each observation: y=f(x)+ε | The baseline. Try a skewed or heavy-tailed distribution in place of the normal. |
+
+| spread | a function of x that multiplies the noise: y=f(x)+s(x)ε | Procedures that assume equal variance. |
+
+| contamination | { rate, noise }: with probability rate the noise comes from a second distribution; or { rate, value }: the observation is replaced outright | Outliers. Means against medians, least squares against robust fits. |
+
+| xNoise | a distribution added to the recorded x; y is made from the true x | Errors in variables: the slope estimate shrinks toward zero. |
+
+| round | observations are rounded to multiples of a step (or { x, y } steps) | Coarse instruments, ties. |
+
+| censor | { below, above }: values past a limit are recorded as the limit | Detection limits, a scale that tops out. |
+
+| missing | the probability an observation is lost (recorded as NaN) | Handling of gaps. data.complete() returns the pairs that are present. |
+
+The data set records what happened to each observation: `contaminated`, `censored` and `missing` are lists of flags, and `trueX` and `trueY` are the values before any departure. A procedure never sees these; you use them to mark its homework.
+
+### One change at a time
+
+```js
+const dirty = line.with({ contamination: { rate: 0.1, noise: normal(0, 10) } });
+const d2 = dirty.sample(50, 42);
+String(d2);       // "… (seed 42; 7 contaminated, 0 censored, 0 missing)"
+d2.x[0] === data.x[0];                    // true: the same x values
+fast.leastSquares(d2.x, d2.y).r2;         // 0.115…, down from 0.701…
+```
+
+`with` returns the same model with some parts changed. Each part of a model draws from its own [named stream](https://ratmath.com/stats/sampling.html), so with the same seed the two data sets share their x values, and the observations that were not contaminated are identical. The difference between the two fits is caused by the contamination and by nothing else.
+
+### What the departures do to a slope
+
+For a line y=β0​+β1​x+ε fitted by least squares:
+
+- Noise in y with mean zero leaves the slope unbiased, whatever its distribution; contamination with mean zero only makes it noisier.
+
+- Noise in the recorded x with variance σu2​ biases the slope toward zero by the factor σx2​/(σx2​+σu2​). With x uniform on (0,10), σx2​=100/12, and with σu​=2 the factor is 0.676: a true slope of 0.5 is estimated as about 0.338.
+
+- Censoring y from above flattens the top of the line, and the slope with it.
+
+The code box measures each of these, and the [experiments](https://ratmath.com/stats/experiments.html) page turns such measurements into coverage and power.
+
+### Exact data
+
+`sample(n, seed, { exact: true })` makes every draw a fraction (see [exact draws](https://ratmath.com/stats/sampling.html)), so that exact statistics of the data, such as a mean as a fraction or an exact permutation test, are reproducible to the last digit. It is much slower and meant for small samples.
+
+### Try it
+
+```js
+// One truth, four ways to spoil it. Does least squares still find the slope 0.5?
+const line = model({ truth: [2, 0.5], x: uniform(0, 10), noise: normal(0, 1) });
+const versions = {
+  "clean":              line,
+  "10% contaminated":   line.with({ contamination: { rate: 0.1, noise: normal(0, 10) } }),
+  "x recorded ± 2":     line.with({ xNoise: normal(0, 2) }),
+  "censored above 6":   line.with({ censor: { above: 6 } }),
+  "spread grows with x": line.with({ spread: (x) => 0.2 + 0.2 * x }),
+};
+for (const [name, m] of Object.entries(versions)) {
+  const study = estimatorStudy({ model: m, n: 50, truth: 0.5, runs: 1000, seed: 1,
+    estimator: (data) => fast.leastSquares(data.x, data.y).slope });
+  PRINT(name.padEnd(20), `mean slope ${study.mean.toFixed(3)}, sd ${study.sd.toFixed(3)}, bias ${study.bias.toFixed(3)} ± ${(1.96 * study.standardError).toFixed(3)}`);
+}
+// The theory for error in x: 0.5 × (100/12) / (100/12 + 4)
+PRINT("predicted slope with x error:", (0.5 * (100 / 12) / (100 / 12 + 4)).toFixed(3));
+
+// One data set, to look at.
+String(versions["censored above 6"].sample(50, 42))
+```
+
+---
+
+Page: https://ratmath.com/stats/experiments.html
+
+Simulated
+
+## Experiments
+
+Draw many data sets from a model that is known, run a procedure on each, and count how often it is right. An experiment's answer is itself a statistic, so it comes with its own interval: you can tell a real shortfall in coverage from the luck of the draw.
+
+### How often
+
+```js
+import { howOften, die, dice } from "@ratmath/stats";
+
+// five dice all different: by simulation, then exactly
+const sim = howOften({ draw: (rng) => die().samples(5, rng), event: (roll) => new Set(roll).size === 5, runs: 5000, seed: 9 });
+String(sim);    // "0.0930 (simulated: 465 of 5000 runs, seed 9; 95% interval 0.0851 to 0.1014)"
+sim.rate;       // 93/1000: hits over runs, exactly
+sim.interval;   // { low, high, level }: Clopper and Pearson's interval for the true rate
+
+const exact = dice(5).prob((roll) => new Set(roll).size === 5);   // 5/54 = 0.0926
+sim.compare(exact);     // "inside"
+```
+
+Data come from `{ model, n }` (a [model](https://ratmath.com/stats/models.html) and a sample size) or from `draw(rng)`, any function of the generator. The number of hits in R independent runs is binomial(R,π) where π is the true rate, so the [exact interval for a proportion](https://ratmath.com/stats/exact-tests.html) applies to the experiment itself. `compare(value)` says whether a stated value is `"below"`, `"inside"` or `"above"` that interval.
+
+### Coverage of an interval
+
+```js
+import { coverage, binomial, proportionInterval } from "@ratmath/stats";
+
+const wald = coverage({
+  draw: (rng) => binomial(30, "1/10").sample(rng),         // a count out of 30, true p = 1/10
+  interval: (k) => { const ci = proportionInterval(k, 30, { method: "wald" }); return [ci.low, ci.high]; },
+  truth: "1/10", runs: 2000, seed: 1,
+});
+String(wald);          // "0.8200 (simulated: 1640 of 2000 runs, seed 1; 95% interval 0.8024 to 0.8366)"
+wald.compare("0.95");  // "above": 95% is above anything the experiment supports
+wald.meanWidth;        // 0.2015…
+```
+
+A 95% confidence interval is a procedure that contains the truth in 95% of samples. `coverage` measures that directly. Here the textbook interval for a proportion, at n=30 and p=0.1, covers about 82% of the time, and the experiment's own interval shows that the shortfall is not luck. With `method: "wilson"` the same experiment gives 0.9815 and with `"exact"` 0.9920.
+
+### Size and power of a test
+
+```js
+import { rejectionRate, powerCurve, binomialTest } from "@ratmath/stats";
+
+const toss = (p) => (rng) => binomial(20, p).sample(rng);
+const test = (k) => binomialTest(k, 20, "1/2");
+
+String(rejectionRate({ draw: toss("1/2"), test, alpha: "0.05", runs: 2000, seed: 1 }));
+// "0.0415 (simulated: 83 of 2000 runs, …)": the null is true, so this is the test's size
+String(rejectionRate({ draw: toss("7/10"), test, runs: 2000, seed: 1 }));
+// "0.4110 (simulated: 822 of 2000 runs, …)": the null is false, so this is its power
+
+powerCurve({ effects: ["1/2", "6/10", "7/10", "8/10"], draw: toss, test, runs: 1000, seed: 1 });
+// rates 0.033, 0.131, 0.417, 0.804
+```
+
+`test` returns a p-value, a test result, or true for "reject". When the model satisfies the null hypothesis the rejection rate estimates the test's size, which should not exceed α; otherwise it estimates the power. `powerCurve` runs the same experiment at each of several effects with the same seed, so the curve is not roughened by different random numbers at each point.
+
+### An estimator's bias and error
+
+```js
+import { estimatorStudy, model, normal, fast } from "@ratmath/stats";
+
+const m = model({ truth: 10, noise: normal(0, 1), contamination: { rate: 0.1, noise: normal(0, 10) } });
+const s = estimatorStudy({ model: m, n: 25, estimator: (data) => fast.median(data.y), truth: 10, runs: 4000, seed: 2 });
+String(s);   // "mean 10.003, sd 0.27412, bias 0.0031262 ± 0.008495, rmse 0.2741 (simulated: 4000 runs, seed 2)"
+```
+
+The result has the estimates themselves, their mean and standard deviation, and with a truth the bias and the root mean squared error E[(θ^−θ)2]​. The bias is reported as bias±1.96se, where se=s/R​ is the standard error of the mean of the estimates: an approximate 95% interval, in floating point, and labelled simulated.
+
+### What an experiment can and cannot say
+
+An experiment is evidence about one model, one sample size and one procedure. Its interval covers the sampling error of the simulation and nothing else. When an exact answer is available, as for the dice above or the power of an exact test (a finite sum), compute it; use simulation for what cannot be counted, and say which you did. The library's labels are there so that this is never ambiguous.
+
+### Try it
+
+```js
+// Mean, median or trimmed mean? It depends on whether the data are clean.
+const clean = model({ truth: 10, noise: normal(0, 1) });
+const dirty = clean.with({ contamination: { rate: 0.1, noise: normal(0, 10) } });
+const estimators = { mean: fast.mean, median: fast.median, "trimmed 10%": (y) => fast.trimmedMean(y, 0.1) };
+
+for (const [label, m] of [["clean", clean], ["10% contaminated", dirty]]) {
+  PRINT(label);
+  for (const [name, f] of Object.entries(estimators)) {
+    const s = estimatorStudy({ model: m, n: 25, estimator: (data) => f(data.y), truth: 10, runs: 2000, seed: 2 });
+    PRINT("  " + name.padEnd(12), "rmse", s.rmse.toFixed(3));
+  }
+}
+
+// Does the t interval keep its 95% when the noise is skewed?
+const t = studentT(14).fast.quantile(0.975);
+const tInterval = (y) => {
+  const half = t * fast.sd(y) / Math.sqrt(y.length);
+  return [fast.mean(y) - half, fast.mean(y) + half];
+};
+const normalNoise = coverage({ model: clean, n: 15, interval: (d) => tInterval(d.y), truth: 10, runs: 2000, seed: 3 });
+const skewedNoise = coverage({ model: model({ truth: 0, noise: exponential(1) }), n: 15, interval: (d) => tInterval(d.y), truth: 1, runs: 2000, seed: 3 });
+PRINT("normal noise:     ", String(normalNoise), "→ 95% is", normalNoise.compare("0.95"));
+PRINT("exponential noise:", String(skewedNoise), "→ 95% is", skewedNoise.compare("0.95"));
+skewedNoise.meanWidth
+```
+
+---
+
+Page: https://ratmath.com/stats/means.html
+
+Inference
+
+## Tests for means
+
+Is a mean what it is claimed to be? Do two means differ? The z and t tests answer with a p-value, the matching intervals with a range of plausible values. Here the statistic is exact, the p-value is a certified enclosure, and a decision that sits on the edge says so.
+
+### One sample, and pairs
+
+```js
+// Student's sleep data (1908): extra hours of sleep for ten patients on two drugs
+const drug1 = [0.7, -1.6, -0.2, -1.2, -0.1, 3.4, 3.7, 0.8, 0.0, 2.0];
+const drug2 = [1.9, 0.8, 1.1, 0.1, -0.1, 4.4, 5.5, 1.6, 4.6, 3.4];
+import { tTest, meanInterval, show } from "@ratmath/stats";
+
+const p = tTest(drug2, drug1, { paired: true });
+String(p);             // "paired t test: p = 0.002833 (certified, two-sided)"
+p.statisticSquared;    // 56169/3404: t² exactly
+show(p.statistic);     // "4.062128"
+p.df;                  // 9
+p.interval();          // { low: 0.7001…, high: 2.4599…, level: 19/20, … }: the mean extra sleep
+p.reject("0.01");      // true
+```
+
+For a sample x1​,…,xn​ with mean xˉ and variance s2=n−11​∑(xi​−xˉ)2, the t statistic for H0​:μ=μ0​ is
+
+t=s/n​xˉ−μ0​​,
+and for normal data it follows Student's t distribution with n−1 degrees of freedom. A paired test is the one-sample test applied to the differences within pairs, which removes the variation between patients: here the same data give p = 0.0028 paired and p = 0.079 unpaired.
+
+### How exactness survives the square root
+
+t involves s2/n​, which is rarely rational. Its square
+
+t2=s2n(xˉ−μ0​)2​
+is, so that is what is kept, and the two-sided p-value is computed from it: if T has the t distribution with ν degrees of freedom, T2 has the F(1,ν) distribution, so P(∣T∣≥∣t∣)=P(F1,ν​≥t2), evaluated as a certified enclosure at an exact argument. A one-sided p-value is half of that, or one minus half, according to the sign of xˉ−μ0​. The z test works the same way with χ12​, the distribution of Z2.
+
+### Two samples: Welch, or pooled
+
+```js
+tTest(drug2, drug1);                           // Welch: p = 0.079394, df = 17.776474…
+tTest(drug2, drug1).df;                        // an exact fraction
+tTest(drug2, drug1, { equalVariance: true });  // pooled: p = 0.079187, df = 18
+```
+
+With two independent samples the standard error of xˉ1​−xˉ2​ is s12​/n1​+s22​/n2​​. Welch's test uses it with the Welch–Satterthwaite degrees of freedom
+
+ν=n1​−1(s12​/n1​)2​+n2​−1(s22​/n2​)2​(s12​/n1​+s22​/n2​)2​,
+which is an exact rational here. The pooled test assumes equal variances and uses sp2​=n1​+n2​−2(n1​−1)s12​+(n2​−1)s22​​ on n1​+n2​−2 degrees of freedom. When the variances differ and the smaller sample has the larger variance the pooled test rejects far too often; the [testing the tests](https://ratmath.com/stats/testing-the-tests.html) page measures by how much. Welch's test is the default.
+
+### Intervals are the tests turned around
+
+The interval xˉ±tν,1−α/2​s/n​ holds exactly the values μ0​ that the two-sided test at level α keeps. The quantile and the square root are enclosures, so each end is rounded outward to a rational: the interval returned contains the true interval.
+
+```js
+meanInterval(drug1);                       // t interval, 95%
+meanInterval(drug1, { level: "0.99" });     // wider
+meanInterval(drug1, { alternative: "greater" });   // { low: …, high: null }: one-sided
+zTest([102, 98, 110, 105, 95, 108, 101, 99], { mu: 100, sigma: 5 });   // σ known: p = 0.203092
+```
+
+### Try it
+
+```js
+// Student's sleep data (1908): extra hours of sleep for ten patients on two drugs
+const drug1 = [0.7, -1.6, -0.2, -1.2, -0.1, 3.4, 3.7, 0.8, 0.0, 2.0];
+const drug2 = [1.9, 0.8, 1.1, 0.1, -0.1, 4.4, 5.5, 1.6, 4.6, 3.4];
+const p = tTest(drug2, drug1, { paired: true });
+PRINT(String(p), "  t =", show(p.statistic, 8), "  t² =", p.statisticSquared);
+const ci = p.interval();
+PRINT("95% interval for the mean difference:", show(ci.low, 4), "to", show(ci.high, 4));
+PRINT(String(tTest(drug2, drug1)), " df =", show(tTest(drug2, drug1).df, 4));
+// the interval is where the test keeps: just outside it, the test rejects
+PRINT(tTest(drug2, drug1, { paired: true, mu: ci.high.add(new Rational(1, 1000)) }).decision("0.05"));
+tTest(drug2, drug1, { paired: true, alternative: "greater" }).pValue
+```
+
+---
+
+Page: https://ratmath.com/stats/variances-proportions.html
+
+Inference
+
+## Variances and proportions
+
+The spread of normal data is judged with the chi-square and F distributions, and proportions with the normal approximation. The statistics are exact fractions; the p-values and interval ends are certified.
+
+### One variance
+
+For normal data (n−1)s2/σ2 has the chi-square distribution with n−1 degrees of freedom. So
+
+(χn−1,1−α/22​(n−1)s2​, χn−1,α/22​(n−1)s2​)
+is a confidence interval for σ2, and its square roots one for σ. Unlike the t interval it is not symmetric, and it leans heavily on normality: with heavy tails its coverage drops well below the level.
+
+```js
+// Student's sleep data (1908): extra hours of sleep for ten patients on two drugs
+const drug1 = [0.7, -1.6, -0.2, -1.2, -0.1, 3.4, 3.7, 0.8, 0.0, 2.0];
+const drug2 = [1.9, 0.8, 1.1, 0.1, -0.1, 4.4, 5.5, 1.6, 4.6, 3.4];
+import { varianceInterval, varianceTest, fTest, proportionTest, show } from "@ratmath/stats";
+
+varianceInterval(drug1);          // σ² between 1.5142… and 10.6670…; estimate 3.200556; sd from 1.2305 to 3.2660
+varianceTest(drug1, 4).statistic; // 5761/800 = (n − 1)s²/σ0², exactly
+String(varianceTest(drug1, 4));   // "chi-square test for a variance: p = 0.767649 (certified, two-sided)"
+```
+
+The two-sided p-value of an asymmetric statistic is twice the smaller tail, capped at 1.
+
+### Two variances
+
+The ratio (s12​/σ12​)/(s22​/σ22​) has the F(n1​−1,n2​−1) distribution. `fTest` tests a stated ratio (1 by default) and its interval is for σ12​/σ22​.
+
+```js
+const f = fTest(drug1, drug2);
+f.statistic;     // 28805/36081
+f.interval();    // from 0.1983… to 3.2141…
+```
+
+### Proportions
+
+With k successes in n trials, H0​:p=p0​ is tested by
+
+z2=np0​(1−p0​)(k−np0​)2​,
+compared with χ12​. For two samples the pooled proportion p^​=(k1​+k2​)/(n1​+n2​) gives z2=(p^​1​−p^​2​)2/(p^​(1−p^​)(1/n1​+1/n2​)), which is exactly the chi-square statistic of the 2×2 table. The interval for one proportion is Wilson's; for a difference it is the Wald interval.
+
+```js
+proportionTest(527, 1000);                  // p = 0.087705; z² = 729/250
+binomialTest(527, 1000);                    // the exact test: p = 0.093687
+proportionTest(527, 1000, "1/2", { correct: true });    // with Yates's continuity correction
+proportionTest([45, 30], [100, 100]);       // p = 0.028460; the difference 3/20
+proportionTest([45, 30], [100, 100]).interval();        // from 0.0174… to 0.2826…
+```
+
+The normal approximation is a convenience. For small counts the [exact binomial and Fisher tests](https://ratmath.com/stats/exact-tests.html) give p-values as fractions and need no approximation at all.
+
+### Try it
+
+```js
+// Student's sleep data (1908): extra hours of sleep for ten patients on two drugs
+const drug1 = [0.7, -1.6, -0.2, -1.2, -0.1, 3.4, 3.7, 0.8, 0.0, 2.0];
+const drug2 = [1.9, 0.8, 1.1, 0.1, -0.1, 4.4, 5.5, 1.6, 4.6, 3.4];
+const v = varianceInterval(drug1);
+PRINT("σ² in", show(v.low, 4), "to", show(v.high, 4), "; σ in", show(v.sd.low, 4), "to", show(v.sd.high, 4));
+PRINT(String(fTest(drug1, drug2)));
+// the z test against the exact binomial test, as n grows with the same proportion
+for (const n of [20, 100, 1000]) {
+  const k = Math.round(n * 0.56);
+  PRINT(n, show(proportionTest(k, n).pValue, 5), show(binomialTest(k, n).pValue, 5));
+}
+// two proportions and the 2×2 chi-square: the same statistic
+const z = proportionTest([45, 30], [100, 100]);
+PRINT(z.statisticSquared, chiSquareTest([[45, 55], [30, 70]]).statistic);
+z.interval()
+```
+
+---
+
+Page: https://ratmath.com/stats/chi-square.html
+
+Inference
+
+## Chi-square tests
+
+Do counts fit a model? Are two classifications independent? Pearson's statistic adds up (observed − expected)²/expected over the cells. It is an exact fraction; its p-value comes from the chi-square distribution, certified.
+
+### Goodness of fit
+
+```js
+import { chiSquareTest } from "@ratmath/stats";
+
+const die = chiSquareTest([22, 17, 21, 18, 12, 30]);   // 120 rolls: is the die fair?
+die.statistic;        // 91/10
+die.df;               // 5
+die.contributions;    // [1/5, 9/20, 1/20, 1/5, 16/5, 5]: the six cells' shares
+String(die);          // "chi-square goodness-of-fit test: p = 0.105141 (certified, greater)"
+
+// Mendel's peas: round yellow, round green, wrinkled yellow, wrinkled green, against 9:3:3:1
+chiSquareTest([315, 108, 101, 32], { p: ["9/16", "3/16", "3/16", "1/16"] });   // X² = 196/417, p = 0.925426
+```
+
+With observed counts Oi​ and expected counts Ei​=Npi​,
+
+X2=i∑​Ei​(Oi​−Ei​)2​
+is approximately χ2 with k−1 degrees of freedom when the model is right, less one for each parameter estimated from the data (option `estimated`). Large values mean a poor fit, so the p-value is the upper tail. The approximation needs the expected counts to be not too small; `smallExpected` flags any below 5. Mendel's fit is so good that Fisher, looking at all of Mendel's experiments together, suspected the data had been tidied.
+
+### Independence
+
+For an r×c table, independence of the two classifications predicts Eij​=Ri​Cj​/N from the row and column totals, and X2 has (r−1)(c−1) degrees of freedom.
+
+```js
+const t = chiSquareTest([[20, 30, 25], [30, 15, 30]]);
+t.statistic;    // 82/11
+t.expected;     // [[25, 45/2, 55/2], [25, 45/2, 55/2]]
+t.df;           // 2
+String(t);      // "… p = 0.024058 …"
+
+const small = [[12, 5], [7, 14]];
+chiSquareTest(small);                     // p = 0.022384
+chiSquareTest(small, { correct: true });  // Yates: p = 0.050285
+fisherTest(small);                        // exact: p = 0.048853
+```
+
+Yates's correction shrinks each ∣O−E∣ by 21​ in a 2×2 table to allow for the counts being whole numbers. It overcorrects, as the example shows: the exact Fisher test lies between the two.
+
+### Try it
+
+```js
+// a loaded die: how many rolls before the test notices?
+const loaded = ["1/6", "1/6", "1/6", "1/6", "1/8", "5/24"];   // five turns up less, six more
+for (const n of [60, 240, 960]) {
+  const expected = loaded.map((p) => new Rational(p).multiply(new Rational(n)));
+  // the counts we would see on average, rounded
+  const counts = expected.map((e) => Number(e.round()));
+  const t = chiSquareTest(counts);
+  PRINT(n, "rolls:", counts.join(" "), " X² =", show(t.statistic, 3), " p =", show(t.pValue, 4));
+}
+chiSquareTest([[20, 30, 25], [30, 15, 30]]).contributions
+```
+
+---
+
+Page: https://ratmath.com/stats/estimation.html
+
+Inference
+
+## Fitting distributions
+
+Given data and a family of distributions, which member fits? Maximum likelihood picks the parameters that make the data most probable; the method of moments matches the mean and variance. Where the answer has a closed form it is an exact fraction.
+
+### Closed forms
+
+```js
+import { fit, show } from "@ratmath/stats";
+
+const d = [3, 1, 4, 1, 5, 9, 2, 6];
+fit(d, "normal").params;        // { mu: 31/8, variance: 423/64, sigma: 2.570870… }
+fit(d, "exponential").params;   // { rate: 8/31 }
+fit(d, "poisson").params;       // { lambda: 31/8 }
+fit(d, "uniform").params;       // { a: 1, b: 9 }: the smallest and largest values
+fit(d, "uniform", { method: "moments" }).params;   // { a: −0.577878…, b: 8.327878… }
+fit([2, 3, 1], "binomial", { trials: 4 }).params;  // { trials: 4, p: 1/2 }
+```
+
+For most textbook families the likelihood equations solve in closed form: the normal mean is xˉ and its variance n1​∑(xi​−xˉ)2 (dividing by n, not n−1), the exponential rate is 1/xˉ, the Poisson mean is xˉ. With rational data these are exact. The method of moments sets the population mean and variance equal to the sample's; for the uniform distribution that gives xˉ±3v​, which need not even contain the data, while maximum likelihood gives the range of the data.
+
+### Gamma: an equation to solve
+
+The gamma family's moment estimates are exact, k=xˉ2/v and rate xˉ/v. Its maximum-likelihood shape solves
+
+logk−ψ(k)=logxˉ−n1​∑logxi​,
+with ψ the digamma function. The left side decreases from ∞ to 0, so there is exactly one root, and it is enclosed by bisection on certified values of ψ and log (both from @ratmath/analytic). The answer is an interval of width about 2−64.
+
+```js
+fit(d, "gamma").params;                       // { shape: 2.093251…, rate: 0.540194… }, certified
+fit(d, "gamma", { method: "moments" }).params; // { shape: 961/423, rate: 248/423 }, exact
+fit([1, 2, 4], "lognormal").params.mu;        // log 2, certified: the mean of the logs
+```
+
+When the parameters are enclosures the result has no `distribution`, since the distributions take exact parameters; when they are exact, `distribution` is the fitted member, ready for its density, quantiles or samples.
+
+### Try it
+
+```js
+// maximum likelihood against moments for gamma data, by experiment
+const truth = gamma(2, 1);
+const rng0 = rng("fitting");
+const data = Array.from({ length: 40 }, () => new Rational(Math.round(truth.sample(rng0) * 1000), 1000));
+const mle = fit(data, "gamma").params;
+const mom = fit(data, "gamma", { method: "moments" }).params;
+PRINT("maximum likelihood: shape", show(mle.shape, 4), " rate", show(mle.rate, 4));
+PRINT("moments:            shape", show(mom.shape, 4), " rate", show(mom.rate, 4));
+// an exact fit is a distribution you can use straight away
+const f = fit([1, 3], "normal").distribution;
+PRINT(String(f), show(f.cdf(3), 6));
+estimatorStudy({ draw: (r) => Array.from({ length: 40 }, () => truth.sample(r)), estimator: (x) => { const m = x.reduce((s, v) => s + v, 0) / x.length; const v = x.reduce((s, u) => s + (u - m) ** 2, 0) / x.length; return m * m / v; }, truth: 2, runs: 300, seed: 1 }).toString()
+```
+
+---
+
+Page: https://ratmath.com/stats/testing-the-tests.html
+
+Inference
+
+## Testing the tests
+
+A 95% interval should catch the truth 95% of the time; a test at 5% should reject a true null 5% of the time. Both are claims about repeated sampling, so they can be checked by drawing from a seeded model whose truth is known. The package's own test suite does exactly that.
+
+### Coverage
+
+```js
+import { coverage, meanInterval, normal, Rational } from "@ratmath/stats";
+
+const sample = (dist, n, rng) =>
+  Array.from({ length: n }, () => new Rational(BigInt(Math.round(dist.sample(rng) * 100)), 100n));
+
+const c = coverage({
+  draw: (rng) => sample(normal(10, 2), 12, rng),      // twelve readings, true mean 10
+  interval: (d) => meanInterval(d, { bits: 32 }),
+  truth: 10, runs: 300, seed: 3,
+});
+String(c);              // the fraction covered, with its own 95% interval from the 300 runs
+c.compare("0.95");      // "inside": 95% is consistent with what was seen
+```
+
+Each run draws a fresh sample from the seeded generator, builds the interval, and records whether it contains the true value. The proportion covered is itself an estimate, so `coverage` reports it with a binomial interval, and `compare` says whether the nominal level is `"inside"` that interval, or the procedure is clearly `"above"` or `"below"` it. With 300 runs the interval is about ±2.5 percentage points wide, so this catches gross failures, not subtle ones. Because the generator is seeded, the same call gives the same answer every time.
+
+### Size
+
+```js
+const unequal = (rng) => [sample(normal(0, 1), 25, rng), sample(normal(0, 4), 5, rng)];
+rejectionRate({ draw: unequal, test: ([a, b]) => tTest(a, b, { bits: 32 }), runs: 300, seed: 6 });
+                // Welch: about 5%, as stated
+rejectionRate({ draw: unequal, test: ([a, b]) => tTest(a, b, { equalVariance: true, bits: 32 }), runs: 300, seed: 6 });
+                // pooled: well above 10%
+```
+
+The size of a test is how often it rejects when the null hypothesis is true. Here both samples have mean 0, so every rejection is a false alarm. The two samples have different spreads, and the small one has the large spread. Welch's test still rejects about 5% of the time. The pooled test assumes equal variances and rejects far more often. The test suite checks this: the lower end of the pooled test's interval stays above 10%.
+
+### What the suite checks
+
+- The t interval for a mean covers at 95% (normal data, n = 12).
+
+- The one-sample t test has size 5%; Welch's two-sample test keeps it with unequal variances; the pooled test does not.
+
+- The chi-square goodness-of-fit test of a fair die, with 60 rolls, has size 5%.
+
+- The regression slope interval covers the true slope of a seeded line.
+
+Alongside these, exact identities tie the procedures to each other: the pooled t² equals the ANOVA F, the 2×2 chi-square equals the two-proportion z², the correlation t² equals the slope t², and Cook's distance matches leaving each point out. An identity catches a wrong formula; an experiment catches a right formula used where its assumptions fail.
+
+### Breaking the assumptions on purpose
+
+The [models](https://ratmath.com/stats/models.html) page builds data from a known truth plus noise, contamination or censoring. Feeding those models to the tests shows how robust each one is: the t interval tolerates mild skew at moderate n, the chi-square interval for a variance does not tolerate heavy tails, and the pooled t test fails when spreads and sample sizes are mismatched. The [experiments](https://ratmath.com/stats/experiments.html) page has the floating-point versions, which are fast enough for thousands of runs.
+
+### Try it
+
+```js
+const sample = (dist, n, rng) =>
+  Array.from({ length: n }, () => new Rational(BigInt(Math.round(dist.sample(rng) * 100)), 100n));
+
+// coverage of the 95% t interval, normal data
+const c = coverage({ draw: (rng) => sample(normal(10, 2), 12, rng), interval: (d) => meanInterval(d, { bits: 32 }), truth: 10, runs: 150, seed: 3 });
+PRINT("t interval:", String(c), "→ 95% is", c.compare("0.95"));
+
+// the variance interval with heavy-tailed noise (t with 3 df, variance 3)
+const v = coverage({ draw: (rng) => sample(studentT(3), 20, rng), interval: (d) => varianceInterval(d, { bits: 32 }), truth: 3, runs: 150, seed: 3 });
+PRINT("variance interval, heavy tails:", String(v), "→ 95% is", v.compare("0.95"));
+
+// Welch against pooled with unequal spreads
+const unequal = (rng) => [sample(normal(0, 1), 25, rng), sample(normal(0, 4), 5, rng)];
+const w = rejectionRate({ draw: unequal, test: ([a, b]) => tTest(a, b, { bits: 32 }), runs: 150, seed: 6 });
+const p = rejectionRate({ draw: unequal, test: ([a, b]) => tTest(a, b, { equalVariance: true, bits: 32 }), runs: 150, seed: 6 });
+PRINT("Welch size:", String(w));
+PRINT("pooled size:", String(p));
+p.compare("0.05")
+```
+
+---
+
+Page: https://ratmath.com/stats/regression.html
+
+Regression
+
+## Linear regression
+
+Least squares has a closed form, so with rational data the coefficients, fitted values, residuals and R² come out as exact fractions. Only the inference on top of them (p-values, interval ends) needs the certified distributions.
+
+### A line through the data
+
+```js
+// hours of study and exam score for ten students
+const hours = [1, 2, 2, 3, 4, 5, 5, 6, 7, 8];
+const score = [52, 55, 61, 60, 68, 70, 74, 75, 83, 86];
+import { linearModel, show } from "@ratmath/stats";
+
+const m = linearModel(hours, score);
+String(m);         // "y = 22847/481 + 2338/481·x  (n = 10, R² = 1366561/1412216)"
+m.coefficients;    // [22847/481, 2338/481]: about 47.50 and 4.861
+m.variance;        // 9131/1924: s², the residual variance on n − p = 8 degrees of freedom
+m.table();         // estimate, standard error, t and p-value for each coefficient
+m.interval("x");   // slope between 4.1364 and 5.5850 (95%)
+m.fTest();         // F test of the whole regression
+```
+
+With a design matrix X (a column of ones for the intercept, then one column per predictor) and responses y, least squares minimises ∥y−Xβ∥2. The minimiser solves the normal equations
+
+X⊤Xβ^​=X⊤y.
+The package forms X⊤X exactly and inverts it by Gauss–Jordan elimination over the rationals, so β^​, the fitted values y^​=Xβ^​ and the residuals e=y−y^​ are exact. So are the sums of squares SSE=∑ei2​, SST=∑(yi​−yˉ​)2, R2=1−SSE/SST and the residual variance s2=SSE/(n−p). If one column is a linear combination of the others X⊤X is singular; the fit refuses with code `"collinear"` and names the column that breaks the rank.
+
+### Inference on the coefficients
+
+Under the usual model, y=Xβ+ε with independent N(0,σ2) errors, β^​ is normal with covariance σ2(X⊤X)−1. Replacing σ2 by s2 gives, for each coefficient,
+
+tj​=s[(X⊤X)−1]jj​​β^​j​−b​∼tn−p​.
+As with the t tests, tj2​ is exact and the p-value comes from F(1,n−p) at that exact argument. The overall F test compares the model with the intercept alone: F=SSE/(n−p)SSR/(p−1)​, an exact fraction.
+
+### Predicting
+
+```js
+m.predict(6);                                   // 36875/481 ≈ 76.66
+m.predictionInterval(6);                        // the mean score at 6 hours: [74.6532, 78.6732]
+m.predictionInterval(6, { kind: "new" });       // one new student: [71.2524, 82.0740]
+```
+
+At a new point x0​ (with its leading 1), the fitted mean x0⊤​β^​ has standard error sh0​​ with h0​=x0⊤​(X⊤X)−1x0​. A single new observation adds its own noise, so its interval uses s1+h0​​ and is always wider: it never shrinks to zero however much data there is.
+
+### Leverage and influence
+
+```js
+m.leverage;               // the diagonal of the hat matrix, exact: 157/481, 101/481, …, 5/13
+m.standardizedResiduals();// eᵢ / (s√(1 − hᵢ))
+m.cooksDistance;          // the third student (2 hours, 61 points) has the most influence: 0.506
+```
+
+The hat matrix H=X(X⊤X)−1X⊤ maps y to y^​; its diagonal entries hi​, the leverages, lie in [0,1], sum to p, and measure how far point i sits from the others in predictor space. Cook's distance
+
+Di​=ps2ei2​​⋅(1−hi​)2hi​​
+measures how far all the fitted values move when point i is left out; the test suite checks this formula against refitting without each point. Both are exact here.
+
+### Several predictors, and curves
+
+```js
+const house = linearModel({ size: [50, 70, 80, 100, 120, 60, 90, 110], rooms: [2, 3, 3, 4, 4, 2, 3, 5] },
+                          [150, 200, 230, 270, 330, 165, 250, 300]);
+String(house);   // "y = 8405/472 + 1231/472·size − 95/118·rooms  (n = 8, R² = 526772/529525)"
+house.predict({ size: 85, rooms: 3 });   // 27975/118
+// rooms adds nothing once size is known: p = 0.8667
+
+const q2 = polyFit([0, 1, 2, 3, 4, 5, 6], [1.2, 1.9, 4.8, 9.6, 16.5, 25.4, 36.1], 2);
+String(q2);      // "y = 241/210 − 5/28·x + 421/420·x^2  (…)"
+compareModels(q2, polyFit([0, 1, 2, 3, 4, 5, 6], [1.2, 1.9, 4.8, 9.6, 16.5, 25.4, 36.1], 3));
+                 // F = 7.56, p = 0.070769: the cubic term is not needed at 5%
+```
+
+A polynomial fit is linear regression on the columns x,x2,…,xd. Two nested models, the smaller one's columns a subset of the larger one's, are compared by
+
+F=SSEbig​/(n−pbig​)(SSEsmall​−SSEbig​)/(pbig​−psmall​)​,
+which has the F(pbig​−psmall​, n−pbig​) distribution when the extra terms are zero. `compareModels` checks the nesting exactly before it computes anything.
+
+### Try it
+
+```js
+// hours of study and exam score for ten students
+const hours = [1, 2, 2, 3, 4, 5, 5, 6, 7, 8];
+const score = [52, 55, 61, 60, 68, 70, 74, 75, 83, 86];
+const m = linearModel(hours, score);
+PRINT(String(m));
+for (const r of m.table()) PRINT(r.name.padEnd(12), String(r.estimate).padEnd(10), "se", show(r.standardError, 4), " t", show(r.t, 4));
+const ci = m.interval("x");
+PRINT("slope, 95%:", show(ci.low, 4), "to", show(ci.high, 4));
+const pi = m.predictionInterval(6, { kind: "new" });
+PRINT("a new student at 6 hours:", show(pi.low, 4), "to", show(pi.high, 4));
+// the leverages sum to the number of coefficients, exactly
+PRINT("sum of leverages:", String(m.leverage.reduce((a, b) => a.add(b))));
+// a seeded line with known slope 3: does the 95% interval catch it?
+const line = model({ truth: [2, 3], x: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], noise: normal(0, 2), round: "1/100" });
+coverage({ model: line, n: 10, interval: (d) => linearModel(d.x, d.y).interval("x", { bits: 32 }), truth: 3, runs: 100, seed: 8 }).toString()
+```
+
+---
+
+Page: https://ratmath.com/stats/anova.html
+
+Regression
+
+## Analysis of variance
+
+Do several groups share one mean? Analysis of variance splits the total variation into the part between groups and the part within them, and compares the two. Every sum of squares here is an exact fraction.
+
+### One way
+
+```js
+import { anova, show } from "@ratmath/stats";
+
+const a = anova({ A: [23, 25, 21, 24], B: [28, 30, 27, 29], C: [22, 20, 24, 23] });
+String(a);       // "one-way analysis of variance: p = 0.000711 (certified, greater)"
+a.statistic;     // 541/30
+a.table;         // between groups: df 2, ss 541/6;  within groups: df 9, ss 45/2;  total: df 11, ss 338/3
+a.means;         // { A: 93/4, B: 57/2, C: 89/4 }
+a.etaSquared;    // 541/676: the share of the variation explained by the groups
+```
+
+With k groups, group sizes nj​, group means yˉ​j​ and grand mean yˉ​, the total sum of squares splits exactly:
+
+SSTj∑​i∑​(yij​−yˉ​)2​​=SSBj∑​nj​(yˉ​j​−yˉ​)2​​+SSWj∑​i∑​(yij​−yˉ​j​)2​​.
+If all groups have the same mean (and normal errors with a common variance), F=SSW/(N−k)SSB/(k−1)​ has the F(k−1,N−k) distribution. Large values mean the group means are further apart than the noise within groups explains. η2=SSB/SST is the effect size.
+
+### It is a regression
+
+```js
+const g = ["A", "A", "A", "A", "B", "B", "B", "B", "C", "C", "C", "C"];
+const y = [23, 25, 21, 24, 28, 30, 27, 29, 22, 20, 24, 23];
+dummies(g);                          // { B: [0,0,0,0,1,1,1,1,0,0,0,0], C: [...] }: A is the reference
+String(linearModel(dummies(g), y));  // "y = 93/4 + 21/4·B − 1·C  (n = 12, R² = 541/676)"
+linearModel(dummies(g), y).fTest();  // p = 0.000711, the same test
+```
+
+Code each group but one as a 0/1 indicator column and regress. The intercept is the reference group's mean, each coefficient the difference between a group's mean and the reference's, R2 equals η2, and the regression's F test is the ANOVA F test. The test suite checks these identities exactly, along with the two-group case: the pooled t statistic squared is the ANOVA F.
+
+### Two factors
+
+```js
+const fert  = ["lo","lo","hi","hi","lo","lo","hi","hi","lo","lo","hi","hi"];
+const water = ["dry","wet","dry","wet","dry","wet","dry","wet","dry","wet","dry","wet"];
+const yld   = [10, 14, 13, 19, 11, 15, 12, 20, 9, 13, 14, 18];
+const both  = linearModel({ ...dummies(fert, { name: "fert" }), ...dummies(water, { name: "water" }) }, yld);
+String(both);   // "y = 19/2 + 4·fert=hi + 5·water=wet  (n = 12, R² = 123/134)"
+const onlyWater = linearModel(dummies(water, { name: "water" }), yld);
+compareModels(onlyWater, both);   // F = 39.27, p = 0.000147: fertiliser matters, given water
+```
+
+With more than one factor the sums of squares no longer split in a single way unless the design is balanced, so the question has to be asked precisely: does a factor improve the model that already contains the others? That is the nested-model F test from the [regression page](https://ratmath.com/stats/regression.html). Adding a product of indicator columns tests an interaction the same way.
+
+### Try it
+
+```js
+const groups = { A: [23, 25, 21, 24], B: [28, 30, 27, 29], C: [22, 20, 24, 23] };
+const a = anova(groups);
+PRINT(String(a));
+for (const r of a.table) PRINT(r.source.padEnd(16), "df", r.df, " ss", String(r.ss));
+// SSB + SSW = SST, exactly
+PRINT("check:", a.table[0].ss.add(a.table[1].ss).equals(a.table[2].ss));
+// the same F from the regression on indicators
+const labels = Object.entries(groups).flatMap(([k, v]) => v.map(() => k));
+const fit = linearModel(dummies(labels), Object.values(groups).flat());
+PRINT("regression F:", String(fit.fTest().statistic), " ANOVA F:", String(a.statistic));
+// does ANOVA hold its size when all three groups come from one distribution?
+rejectionRate({
+  draw: (rng) => [0, 1, 2].map(() => Array.from({ length: 5 }, () => new Rational(BigInt(Math.round(normal(0, 1).sample(rng) * 100)), 100n))),
+  test: (gs) => anova(gs, { bits: 32 }), runs: 100, seed: 4,
+}).toString()
+```
+
+---
+
+Page: https://ratmath.com/stats/rank-tests.html
+
+Nonparametric
+
+## Rank tests
+
+A rank test looks only at the order of the data, so it needs no assumption of normality. Its null distribution is a counting problem, and here it is counted: the p-value is an exact fraction, with ties handled by midranks, until the sample is large enough that the normal approximation takes over.
+
+### Paired data: sign and signed-rank tests
+
+```js
+// Hamilton depression scores before and after treatment, nine patients
+const before = [1.83, 0.50, 1.62, 2.48, 1.68, 1.88, 1.55, 3.06, 1.30];
+const after  = [0.878, 0.647, 0.598, 2.05, 1.06, 1.29, 1.06, 3.14, 1.29];
+import { signTest, wilcoxonTest, tTest } from "@ratmath/stats";
+
+signTest(before, after).pValue;          // 23/128: 7 of 9 differences are positive
+const w = wilcoxonTest(before, after);
+w.statistic;                             // 40: the sum of the ranks of the positive differences
+w.pValue;                                // 5/128 = 0.0390625, exact
+w.estimate;                              // 23/50: the Hodges–Lehmann estimate of the shift
+tTest(before, after, { paired: true });  // p = 0.016177 (certified), assuming normal differences
+```
+
+The sign test asks only whether each difference is positive. If the median difference is 0, the number of positives among the n non-zero differences is binomial with p=1/2, so the p-value is a binomial tail. The signed-rank test also uses how large the differences are: rank the ∣di​∣ and add the ranks of the positive ones,
+
+W+=di​>0∑​rank(∣di​∣).
+If the differences are symmetric about 0, each sign is a fair coin independent of the ranks, so all 2n sign patterns are equally likely. The distribution of W+ over them is counted by dynamic programming: adding one rank r either leaves the sum alone or adds r. Ties take midranks, and doubling them makes every rank a whole number, so the count stays exact. Above n=60 the default is the normal approximation with the tie-corrected variance
+
+VarW+=24n(n+1)(2n+1)​−481​t∑​(t3−t),
+where t runs over the sizes of the tie groups; `method: "exact"` counts anyway.
+
+### Two groups: Mann–Whitney
+
+```js
+import { mannWhitneyTest } from "@ratmath/stats";
+const x = [0.80, 0.83, 1.89, 1.04, 1.45, 1.38, 1.91, 1.64, 0.73, 1.46];
+const y = [1.15, 0.88, 0.90, 0.74, 1.21];
+const m = mannWhitneyTest(x, y);
+m.statistic;   // 35: pairs with x above y
+m.pValue;      // 764/3003 ≈ 0.2544, exact over all C(15, 5) = 3003 splits
+m.estimate;    // 61/200: the median of the 50 differences x − y
+mannWhitneyTest(x, y, { method: "normal" }).pValue;   // 0.244624, with continuity correction
+```
+
+U counts the pairs (xi​,yj​) with xi​>yj​, ties counting a half; it equals the rank sum of the x's minus m(m+1)/2. Under the null hypothesis every way of choosing which m of the N=m+n pooled values are the x's is equally likely, so the exact p-value is a count over (mN​) choices. That count is done by dynamic programming over the observed midranks, so tied data get the exact conditional distribution rather than an approximation.
+
+### Several groups: Kruskal–Wallis
+
+```js
+import { kruskalWallisTest } from "@ratmath/stats";
+const k = kruskalWallisTest([[2.9, 3.0, 2.5, 2.6, 3.2], [3.8, 2.7, 4.0, 2.4], [2.8, 3.4, 3.7, 2.2, 2.0]]);
+k.statistic;   // 27/35
+k.meanRanks;   // [36/5, 9, 33/5]
+k.pValue;      // 0.679965 from chi-square with 2 degrees of freedom
+```
+
+With Ri​ the rank sum of group i, H=N(N+1)12​∑i​ni​Ri2​​−3(N+1), divided by 1−∑(t3−t)/(N3−N) for ties. It is exact; the p-value uses the chi-square approximation with k−1 degrees of freedom, evaluated with certainty.
+
+### Rank correlation: Spearman and Kendall
+
+```js
+import { spearmanTest, kendallTest } from "@ratmath/stats";
+const a = [86, 97, 99, 100, 101, 103, 106, 110, 112, 113];
+const b = [2, 20, 28, 27, 50, 29, 7, 17, 6, 12];
+spearmanTest(a, b).statistic;   // −29/165: ρ = 1 − 6Σd²/(n(n² − 1)) without ties
+kendallTest(a, b).statistic;    // −1/9
+kendallTest(a, b).pValue;       // 0.727490, exact: permutations of 10 counted by inversions
+```
+
+Spearman's ρ is Pearson's correlation of the ranks. For n≤9 the p-value counts all n! orderings exactly; above that it uses t2=ρ2(n−2)/(1−ρ2) against F(1,n−2). Kendall's τ compares every pair: S is concordant minus discordant pairs. Without ties, S=(2n​)−2I where I is the number of inversions of a permutation, and the number of permutations of n with I inversions satisfies a simple recurrence, so the exact distribution is cheap even for n=60.
+
+### Try it
+
+```js
+// Hamilton depression scores before and after treatment, nine patients
+const before = [1.83, 0.50, 1.62, 2.48, 1.68, 1.88, 1.55, 3.06, 1.30];
+const after  = [0.878, 0.647, 0.598, 2.05, 1.06, 1.29, 1.06, 3.14, 1.29];
+// The exact signed-rank distribution, and the normal approximation beside it
+const w = wilcoxonTest(before, after);
+const z = wilcoxonTest(before, after, { method: "normal" });
+PRINT("W+ =", String(w.statistic), " exact p =", String(w.pValue), "=", show(w.pValue, 6), " normal p =", show(z.pValue, 6));
+// How often does each test reject at 5% when the data really shift by 1/2?
+// A seeded experiment with normal data: the t test is best here, the rank tests close behind.
+const r = rng("rank power");
+let hits = { t: 0, wilcoxon: 0, sign: 0 };
+for (let i = 0; i < 200; i++) {
+  const d = normal("1/2", 1).samples(15, r.fork(`d${i}`));
+  if (tTest(d).reject()) hits.t++;
+  if (wilcoxonTest(d).reject()) hits.wilcoxon++;
+  if (signTest(d).reject()) hits.sign++;
+}
+PRINT("power over 200 runs:", JSON.stringify(hits));
+mannWhitneyTest([1, 2, 2, 3, 5], [2, 3, 4, 4]).pValue
+```
+
+---
+
+Page: https://ratmath.com/stats/kolmogorov-smirnov.html
+
+Nonparametric
+
+## Kolmogorov–Smirnov
+
+How far is the empirical distribution of a sample from a claimed one, or from another sample's? The Kolmogorov–Smirnov statistic is the largest vertical gap between the two step functions, and its distribution under the null hypothesis can be computed exactly.
+
+### One sample
+
+```js
+import { ksTest, normal, kolmogorovCdf } from "@ratmath/stats";
+
+const u = ksTest([0.1, 0.2, 0.35, 0.5, 0.9], (x) => x);   // against the uniform cdf F(x) = x
+u.statistic;   // 3/10
+u.pValue;      // 83/125, exact
+
+const z = ksTest([0.61, 0.29, 0.06, 0.59, -1.73, -0.74, 0.51, -0.56, 0.39, 1.64, 0.05, -0.06, 0.64,
+                  -0.82, 0.37, 1.77, 1.09, -1.28, 2.36, 1.31, 1.05, -0.32, -0.40, 1.06, -2.47], normal());
+z.statistic;   // an enclosure around 0.174092: the normal cdf is certified, not exact
+z.pValue;      // an enclosure around 0.389741 (certified)
+```
+
+With the sample sorted, x(1)​≤⋯≤x(n)​, the statistic is
+
+Dn​=imax​max(ni​−F(x(i)​),F(x(i)​)−ni−1​).
+For a continuous F, Dn​ has the same law whatever F is. Marsaglia, Tsang and Wang showed that P(Dn​<d)=nnn!​(Hn)kk​ for an explicit (2k−1)-square matrix H with k=⌈nd⌉, whose entries are rational when d is. So `kolmogorovCdf(n, d)` is exact: `kolmogorovCdf(10, "0.274")` is a fraction whose decimal expansion begins 0.6284796154565043, the value in their paper. When F is certified, Dn​ is an enclosure and so is the p-value, since P(Dn​≥d) falls as d grows.
+
+Far in the tail the matrix grows, and there a sharper route is cheaper: the one-sided statistic Dn+​ has the exact Smirnov–Birnbaum–Tingey tail
+
+P(Dn+​≥d)=dj=0∑⌊n(1−d)⌋​(jn​)(1−d−nj​)n−j(d+nj​)j−1,
+and P+≤P(Dn​≥d)≤2P+. When 2P+≤1/1000 that enclosure is what is returned (method `"one-sided bound"`): it is tiny and decides any usual level. Above n=100 the p-value is simulated from a seed instead.
+
+### Two samples
+
+```js
+const k = ksTest([1, 2, 3, 4, 5, 6], [3.5, 4.5, 6.5, 7.5, 8.5, 9.5]);
+k.statistic;   // 2/3
+k.pValue;      // 1/7, exact
+ksTest([1, 2, 3, 4, 5, 6], [3.5, 4.5, 6.5, 7.5, 8.5, 9.5], { alternative: "less" }).pValue;   // 1/14
+```
+
+Under the null hypothesis every interleaving of the m and n values is equally likely. An interleaving is a lattice path from (0,0) to (m,n), and the event D says the path stays inside a band around the diagonal. Counting the paths that stay inside, by dynamic programming over the grid, gives the exact p-value. With ties the band is only checked where the pooled value changes, which gives the exact conditional distribution. One-sided alternatives use one edge of the band; "greater" means x tends to be larger, so its empirical cdf lies below.
+
+### Try it
+
+```js
+// The exact Kolmogorov distribution against a simulation from the same seed.
+const n = 12;
+const r = rng("KS check");
+const draws = 4000;
+let below = 0;
+for (let i = 0; i < draws; i++) {
+  const u = uniform().samples(n, r.fork(`u${i}`)).sort((a, b) => a - b);
+  const D = Math.max(...u.map((v, k) => Math.max((k + 1) / n - v, v - k / n)));
+  if (D < 0.3) below++;
+}
+PRINT("P(D12 < 0.3): exact", show(kolmogorovCdf(n, "0.3"), 6), " simulated", (below / draws).toFixed(4));
+// Exponential data against the standard normal: a clear rejection
+const g = rng("not normal");
+const x = exponential(1).samples(40, g);
+PRINT(String(ksTest(x, normal())));
+// one-sided tail and its use as a bound
+const tail = kolmogorovTail(30, "0.4");
+PRINT("P(D⁺ ≥ 0.4), n = 30:", smirnovTail(30, "0.4").toNumber().toExponential(4), "  two-sided between", tail.low.toNumber().toExponential(4), "and", tail.high.toNumber().toExponential(4));
+ksTest([1, 2, 3, 4, 5, 6], [3.5, 4.5, 6.5, 7.5, 8.5, 9.5])
+```
+
+---
+
+Page: https://ratmath.com/stats/bootstrap.html
+
+Nonparametric
+
+## The bootstrap
+
+To see how much a statistic would vary from sample to sample, resample the sample: draw n values with replacement, recompute, and repeat. For a small sample every resample can be listed and weighed, so the bootstrap distribution is exact; otherwise it is simulated from a seed.
+
+### Exact, for small samples
+
+```js
+import { bootstrap } from "@ratmath/stats";
+
+const b = bootstrap([1, 2, 3, 4, 10]);
+String(b);       // "mean 4; bootstrap se 1.41421, bias 0; percentile 0.950 interval [1.80000, 7.20000]
+                 //  (exact over 126 distinct resamples)"
+b.variance;      // 2: the plug-in variance 10 divided by n = 5
+b.interval;      // { low: 9/5, high: 36/5, level: 19/20 }
+b.distribution;  // every value the mean can take (39 of them), with its exact probability
+```
+
+A resample is a multiset of size n from the n data points: there are (n2n−1​) of them, and the one that uses point i exactly ci​ times has probability
+
+c1​!⋯cn​!nnn!​.
+When there are at most 20,000 (n≤9), all of them are weighed and the bootstrap mean, variance, bias and quantiles are exact fractions. This is the bootstrap distribution itself, the thing a simulation only estimates, and it shows the method's own answer without simulation noise. For the mean it reproduces the plug-in formula σ^2/n exactly.
+
+### Simulated, from a seed
+
+```js
+const data = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9];
+String(bootstrap(data, "median"));
+// "median 5; bootstrap se 1.076, bias -0.0145; percentile 0.950 interval [3, 7] (simulated: 2000 resamples, seed 1)"
+bootstrap(data, "median", { method: "basic" }).interval;   // [3, 7]: 2·5 − 7 and 2·5 − 3
+bootstrap(data, (xs) => Math.max(...xs.map(Number)), { resamples: 5000, seed: "max" });
+```
+
+The statistic is `"mean"`, `"median"`, `"variance"` or any function of the resampled list. The percentile interval takes the α/2 and 1−α/2 quantiles of the replicates θ^∗; the basic interval reflects them about the estimate, [2θ^−q1−α/2​,2θ^−qα/2​]. Both are approximations whose coverage depends on the statistic and the sample size; for the median of small samples the bootstrap distribution is lumpy, as the exact version shows. [Testing the tests](https://ratmath.com/stats/testing-the-tests.html) shows how to check coverage with a seeded experiment.
+
+### Try it
+
+```js
+// The exact bootstrap distribution of the median of five values
+const b = bootstrap([2, 3, 5, 7, 11], "median");
+for (const { value, probability } of b.distribution) PRINT(String(value).padStart(3), String(probability).padStart(8), "#".repeat(Math.round(probability.toNumber() * 60)));
+PRINT(String(b));
+// Exact against simulated, for the mean of eight values
+const x = [12, 15, 9, 20, 17, 11, 14, 18];
+const e = bootstrap(x);
+const s = bootstrap(x, "mean", { exactUpTo: 0, resamples: 5000, seed: 3 });
+PRINT("se exact", show(e.se, 6), "  simulated", s.se.toFixed(4));
+e.interval
+```
+
+---
+
+Page: https://ratmath.com/stats/markov-chains.html
+
+Chains and beliefs
+
+## Markov chains
+
+A Markov chain moves between finitely many states, choosing each step with probabilities that depend only on where it is. Everything a course asks of one, from the long-run share of time in each state to the chance of ending in each absorbing state, comes from linear algebra over the rationals, so here it is exact.
+
+### A chain and its long run
+
+```js
+import { markovChain } from "@ratmath/stats";
+
+const weather = markovChain({ sun: { sun: "9/10", rain: "1/10" }, rain: { sun: "1/2", rain: "1/2" } });
+weather.distribution("rain", 3);        // { sun: 39/50, rain: 11/50 } three days after rain
+weather.stationary().distribution;      // { sun: 5/6, rain: 1/6 }
+weather.meanReturnTime("rain");         // 6 = 1/π(rain)
+weather.hitting("rain").expected.sun;   // 10 days from sun to the next rain
+weather.simulate("sun", 12, { seed: 3 }).join(" ");
+```
+
+With Pij​ the probability of moving from i to j, the distribution after n steps is μPn, and `power(n)` computes Pn by repeated squaring. A stationary distribution solves π=πP with ∑πi​=1: one linear system, solved exactly. For an irreducible chain it is unique, and by Kac's lemma the expected time to return to state i is 1/πi​.
+
+Expected hitting times solve another linear system: hi​=0 on the target, and hi​=1+∑j​Pij​hj​ elsewhere. From sun, h=1+109​h, so h=10.
+
+### Classes and periods
+
+```js
+const cycle = markovChain([[0, 1, 0], [0, 0, 1], [1, 0, 0]]);
+cycle.classes();     // [{ states: [0, 1, 2], closed: true, recurrent: true, period: 3 }]
+cycle.isErgodic();   // false: Pⁿ cycles and never settles, though π = (1/3, 1/3, 1/3) exists
+```
+
+States communicate when each can reach the other; the classes are found from reachability. In a finite chain a class is recurrent exactly when no probability leaves it. The period of a class is the greatest common divisor of the lengths of its cycles, found from a breadth-first search. An irreducible chain with period 1 is ergodic: Pn converges to a matrix whose rows all equal π.
+
+### Absorption
+
+```js
+// gambler's ruin with fair bets, from 0 to 4 dollars
+const ruin = markovChain([[1, 0, 0, 0, 0], ["1/2", 0, "1/2", 0, 0], [0, "1/2", 0, "1/2", 0],
+                          [0, 0, "1/2", 0, "1/2"], [0, 0, 0, 0, 1]]);
+const a = ruin.absorption();
+a.probabilities[1];   // { "0": 3/4, "4": 1/4 }
+a.steps;              // { 1: 3, 2: 4, 3: 3 }: k(N − k) bets on average
+```
+
+Order the states with the transient ones first, so that P=(Q0​RI​). The fundamental matrix N=(I−Q)−1=I+Q+Q2+⋯ counts the expected visits to each transient state. Then NR gives the absorption probabilities and N1 the expected number of steps before absorption. Each is exact; `fundamental` returns N itself.
+
+### Try it
+
+```js
+// Long-run behaviour: Pⁿ approaches the stationary rows
+const w = markovChain({ sun: { sun: "9/10", rain: "1/10" }, rain: { sun: "1/2", rain: "1/2" } });
+for (const n of [1, 2, 5, 10, 20]) PRINT(`P^${n} row from rain:`, w.power(n)[1].map((p) => show(p, 6)).join("  "));
+// Snakes and ladders on 10 squares: expected number of rolls of a three-sided die to finish
+const N = 10, jumps = { 3: 7, 8: 2 };
+const rows = Array.from({ length: N + 1 }, (_, i) => {
+  const row = Array(N + 1).fill(0);
+  if (i === N) { row[N] = 1; return row; }
+  for (const d of [1, 2, 3]) { let j = Math.min(N, i + d); j = jumps[j] ?? j; row[j] += 1; }
+  return row.map((c) => `${c}/3`);
+});
+const game = markovChain(rows);
+PRINT("expected rolls from the start:", String(game.absorption().steps[0]));
+PRINT("simulated game:", game.simulate(0, 8, { seed: 1 }).join(" → "));
+game.classes().map((c) => `${c.states.join(",")}: ${c.recurrent ? "recurrent" : "transient"}`)
+```
+
+---
+
+Page: https://ratmath.com/stats/bayesian-updating.html
+
+Chains and beliefs
+
+## Bayesian updating
+
+Bayes' rule turns a prior belief and data into a posterior belief. For the conjugate pairs the posterior stays in the prior's family and its parameters are sums of the data, so updating is exact arithmetic. Means, variances and predictive probabilities are fractions; credible intervals are certified quantiles.
+
+### A probability: beta and binomial
+
+```js
+import { betaPrior } from "@ratmath/stats";
+
+const prior = betaPrior(1, 1);                       // uniform on [0, 1]
+const post = prior.update({ successes: 7, trials: 10 });
+String(post);           // "Beta(8, 4): mean 0.666667"
+post.mean;              // 2/3
+post.mode;              // 7/10, the maximum-likelihood estimate
+post.interval("0.95");  // certified enclosures of the 2.5% and 97.5% quantiles
+post.predictive(3).table;   // [5/91, 20/91, 36/91, 30/91]: successes in the next 3 trials
+```
+
+With prior density proportional to pa−1(1−p)b−1 and k successes in n trials, the posterior is proportional to
+
+pa−1(1−p)b−1⋅pk(1−p)n−k=pa+k−1(1−p)b+n−k−1,
+which is Beta(a+k,b+n−k). Updating twice is updating once with the pooled data, and the order does not matter: the test suite checks both. The predictive law of the next m trials is beta-binomial, P(K=j)=(jm​)(a+b)m​(a)j​(b)m−j​​, with rising factorials, exact.
+
+### A rate: gamma with Poisson or exponential data
+
+```js
+import { gammaPrior } from "@ratmath/stats";
+const calls = gammaPrior(2, 1).update([3, 4, 2, 5]);   // calls per hour in four hours
+String(calls);                  // "Gamma(shape 16, rate 5): mean 3.200000"
+calls.predictive().pmf(3);      // the chance of exactly 3 calls next hour, exact
+const life = gammaPrior(1, 1, { likelihood: "exponential" }).update([0.5, 1.5]);
+life.params;                    // { shape: 3, rate: 3 }
+```
+
+For Poisson counts x1​,…,xn​ the posterior of a Gamma(α,β) prior is Gamma(α+∑xi​,β+n); for exponential waiting times it is Gamma(α+n,β+∑xi​). The predictive law of the next Poisson count is negative binomial.
+
+### A mean: normal with known variance
+
+```js
+import { normalPrior } from "@ratmath/stats";
+const m = normalPrior(0, { variance: 4, dataVariance: 1 }).update([1.2, 0.8, 1.0, 1.4]);
+m.variance;   // 4/17: precisions add, 1/4 + 4/1 = 17/4
+m.mean;       // 88/85: the precision-weighted average of 0 and the sample mean 11/10
+```
+
+τ12​1​=τ02​1​+σ2n​,μ1​=τ12​(τ02​μ0​​+σ2∑xi​​).
+The more data, the more the posterior mean follows the sample and the less the prior.
+
+### Several categories: Dirichlet and multinomial
+
+```js
+import { dirichletPrior } from "@ratmath/stats";
+const d = dirichletPrior({ red: 1, green: 1, blue: 1 }).update({ red: 5, green: 2 });
+d.mean;               // { red: 3/5, green: 3/10, blue: 1/10 }
+d.marginal("red");    // Beta(6, 4): the belief about red alone
+```
+
+Each category's weight grows by its count; the marginal belief about one category's probability is a beta distribution, so its credible interval comes from `marginal(category).interval()`.
+
+### Try it
+
+```js
+// A coin observed in batches: the belief narrows, and the order of the batches does not matter.
+let b = betaPrior(1, 1);
+const batches = [{ successes: 3, trials: 5 }, { successes: 6, trials: 10 }, { successes: 33, trials: 50 }];
+for (const batch of batches) {
+  b = b.update(batch);
+  const ci = b.interval("0.9", { bits: 32 });
+  PRINT(String(b).padEnd(32), " 90% credible:", show(ci.low, 4), "to", show(ci.high, 4));
+}
+const reversed = batches.slice().reverse().reduce((p, x) => p.update(x), betaPrior(1, 1));
+PRINT("same posterior in reverse order:", String(reversed.params.a) === String(b.params.a) && String(reversed.params.b) === String(b.params.b));
+// Exact predictive probabilities: how many heads in the next 4 tosses?
+b.predictive(4).table.map((p) => show(p, 4))
+```
