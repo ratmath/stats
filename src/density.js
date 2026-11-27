@@ -143,7 +143,7 @@ export function fromDensity(f, support, options = {}) {
     const r = nonnegativeOn(p.ast, x, lo, hi);
     if (r === "negative") refuse("not-a-density", `the density ${format(p.ast)} is negative somewhere on [${lo}, ${hi}]`);
     if (r !== true) refuse("not-a-density", `could not prove ${format(p.ast)} ≥ 0 on [${lo}, ${hi}]`);
-    if (p.a === null || p.b === null) checks.nonnegative = `proven on [${lo}, ${hi}]; beyond that by the sign of the leading term only`;
+    if (p.a === null || p.b === null) checks.nonnegative = `proven on [${lo}, ${hi}]; not checked beyond that`;
   }
   // the mass
   let mass = ZERO;
