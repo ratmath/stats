@@ -1,8 +1,8 @@
 // Shared page furniture for the stats docs: the contents column, the theme
 // switch and the code boxes. Add each topic page to PAGES as it is written.
 
-import * as A from "./stats.js?v=8a85435484";
-import { mountRunboxes } from "./runbox.js?v=8a85435484";
+import * as A from "./stats.js?v=aeec1751d1";
+import { mountRunboxes } from "./runbox.js?v=aeec1751d1";
 
 export { A };
 
@@ -26,6 +26,7 @@ export const PAGES = [
   { href: "means.html", title: "Tests for means", blurb: "z and t tests, paired, Welch and pooled, with exact t² and certified p-values" },
   { href: "variances-proportions.html", title: "Variances and proportions", blurb: "Chi-square and F for spread; z tests and Wilson intervals for proportions" },
   { href: "chi-square.html", title: "Chi-square tests", blurb: "Goodness of fit and independence, with Yates' correction and Fisher's test beside them" },
+  { href: "power.html", title: "Power and sample size", blurb: "Closed-form power of z tests, and the smallest n for a margin or a power" },
   { href: "estimation.html", title: "Fitting distributions", blurb: "Maximum likelihood and the method of moments for ten families" },
   { href: "testing-the-tests.html", title: "Testing the tests", blurb: "Seeded experiments check that intervals cover and tests keep their size" },
   { group: "Regression" },

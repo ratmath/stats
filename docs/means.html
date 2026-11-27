@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="https://ratmath.com/assets/katex/0.19.1/katex.min.css">
-<link rel="stylesheet" href="assets/style.css?v=8a85435484">
-<script type="module" src="assets/site.js?v=8a85435484"></script>
+<link rel="stylesheet" href="assets/style.css?v=aeec1751d1">
+<script type="module" src="assets/site.js?v=aeec1751d1"></script>
 </head>
 <body>
 <div class="shell">
@@ -102,6 +102,8 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
 meanInterval(drug1, { level: "0.99" });     // wider
 meanInterval(drug1, { alternative: "greater" });   // { low: …, high: null }: one-sided
 zTest([102, 98, 110, 105, 95, 108, 101, 99], { mu: 100, sigma: 5 });   // σ known: p = 0.203092</code></pre>
+<p>Textbook problems often give only a summary. <code>meanInterval</code> takes <code>{ n, mean, sd }</code> (or <code>variance</code>) in place of the data, with the sample standard deviation (divisor <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n - 1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span>); with <code>sigma</code> it is the z interval. For power and sample sizes see <a href="power.html">Power and sample size</a>.</p>
+<pre><code>meanInterval({ n: 16, mean: "25.3", sd: "4.2" });   // t interval: 23.0620 to 27.5380 (t* = 2.1314, SE = 1.05)</code></pre>
 <section class="runbox" aria-label="Runnable code">
   <div class="runbox-head"><strong>Try it</strong><span>Edit the code and run it with <code>@ratmath/stats</code> and Core's <code>Rational</code> in scope. The last line's value is shown; <code>PRINT(…)</code> adds lines, <code>TEX(…)</code> typesets math.</span></div>
   <textarea spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Code">// Student's sleep data (1908): extra hours of sleep for ten patients on two drugs
@@ -114,6 +116,9 @@ PRINT("95% interval for the mean difference:", show(ci.low, 4), "to", show(ci.hi
 PRINT(String(tTest(drug2, drug1)), " df =", show(tTest(drug2, drug1).df, 4));
 // the interval is where the test keeps: just outside it, the test rejects
 PRINT(tTest(drug2, drug1, { paired: true, mu: ci.high.add(new Rational(1, 1000)) }).decision("0.05"));
+// from a summary only: n = 16, x̄ = 25.3, s = 4.2
+const fromSummary = meanInterval({ n: 16, mean: "25.3", sd: "4.2" });
+PRINT("summary interval:", show(fromSummary.low, 4), "to", show(fromSummary.high, 4));
 tTest(drug2, drug1, { paired: true, alternative: "greater" }).pValue</textarea>
   <div class="runbox-bar"><button type="button" data-run>Run</button><button type="button" class="ghost" data-reset>Reset</button><span class="runbox-meta">Ctrl/⌘ + Enter runs</span></div>
   <div class="runbox-out" aria-live="polite"></div>

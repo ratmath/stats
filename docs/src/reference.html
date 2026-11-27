@@ -108,8 +108,10 @@
 <tr><th>Export</th><th>What it does</th></tr>
 <tr><td>zTest(data, { sigma, mu, alternative, bits })</td><td>z test for a mean with known \(\sigma\).</td></tr>
 <tr><td>tTest(x, [y], { mu, paired, equalVariance, alternative, bits })</td><td>One-sample, paired, Welch (default) or pooled t test.</td></tr>
-<tr><td>meanInterval(data, { level, sigma, alternative, bits })</td><td>t (or z) interval for a mean.</td></tr>
-<tr><td>varianceInterval(data, { level, bits })</td><td>Chi-square interval for \(\sigma^2\); <code>.sd</code> holds the interval for \(\sigma\).</td></tr>
+<tr><td>meanInterval(data, { level, sigma, alternative, bits })</td><td>t (or z) interval for a mean. <code>data</code> may be a summary <code>{ n, mean, sd }</code> or <code>{ n, mean, variance }</code>.</td></tr>
+<tr><td>varianceInterval(data, { level, bits })</td><td>Chi-square interval for \(\sigma^2\); <code>.sd</code> holds the interval for \(\sigma\). <code>data</code> may be <code>{ n, variance }</code> or <code>{ n, sd }</code>.</td></tr>
+<tr><td>power({ test: "z" | "proportion", mu0, mu, sigma | p0, p, n, alpha, alternative })</td><td>Closed-form power as an enclosure (the proportion test by the normal approximation).</td></tr>
+<tr><td>sampleSize({ margin, p | sigma, level }) or ({ power, … as power })</td><td><code>{ n }</code>: the smallest whole n proven to meet the margin or the power.</td></tr>
 <tr><td>varianceTest(data, v0), fTest(x, y, { ratio })</td><td>Chi-square test of one variance; F test of a ratio of two.</td></tr>
 <tr><td>proportionTest(k, n, p0, { correct }), proportionTest([k1, k2], [n1, n2])</td><td>z test for one or two proportions, with Wilson or Wald intervals.</td></tr>
 <tr><td>chiSquareTest(observed | table, { p, expected, estimated, correct })</td><td>Goodness of fit, or independence in a contingency table (Yates' correction on 2×2 when asked).</td></tr>

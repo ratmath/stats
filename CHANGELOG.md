@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `meanInterval` and `varianceInterval` take a summary in place of data:
+  `{ n, mean, sd }`, `{ n, mean, variance }`, `{ n, variance }`, `{ n, sd }`.
+- `power({ test: "z" | "proportion", ... })`: closed-form power as an
+  enclosure (the proportion test by the normal approximation).
+- `sampleSize(...)`: the smallest whole n proven to meet a margin of error
+  (proportion or mean) or a target power.
+- Docs: a "Power and sample size" page.
 - Quartiles the school way: `quartiles`, `iqr`, `fiveNumber` and `quantile`
   take `{ method: "halves" }` (medians of the lower and upper halves, the
   median left out when n is odd, as in most textbooks and the TI-84) and

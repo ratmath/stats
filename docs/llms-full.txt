@@ -1,6 +1,6 @@
 # @ratmath/stats 0.3.0: full documentation
 
-> Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. From https://ratmath.com/stats/, commit 6f486af. Each page ends with a runnable example; in it, PRINT(...) prints.
+> Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. From https://ratmath.com/stats/, commit 3cec172. Each page ends with a runnable example; in it, PRINT(...) prints.
 
 
 ---
@@ -191,7 +191,7 @@ Arguments the library cannot work with are refused with a `StatsError` carrying 
 
 | min, max, range, median, quartiles, iqr, fiveNumber | Order statistics; quartiles is [q1, median, q3]. |
 
-| quantile(data, p, { method }) | linear, weibull, hazen, median-unbiased, inverse, lower, higher, nearest, midpoint. |
+| quantile(data, p, { method }) | linear, weibull, hazen, median-unbiased, inverse, lower, higher, nearest, midpoint; for quartiles also halves (textbook) and tukey. |
 
 | mad, trimmedMean(data, fraction) | Median absolute deviation; the mean after dropping a fraction from each end. |
 
@@ -241,9 +241,13 @@ Arguments the library cannot work with are refused with a `StatsError` carrying 
 
 | tTest(x, [y], { mu, paired, equalVariance, alternative, bits }) | One-sample, paired, Welch (default) or pooled t test. |
 
-| meanInterval(data, { level, sigma, alternative, bits }) | t (or z) interval for a mean. |
+| meanInterval(data, { level, sigma, alternative, bits }) | t (or z) interval for a mean. data may be a summary { n, mean, sd } or { n, mean, variance }. |
 
-| varianceInterval(data, { level, bits }) | Chi-square interval for σ2; .sd holds the interval for σ. |
+| varianceInterval(data, { level, bits }) | Chi-square interval for σ2; .sd holds the interval for σ. data may be { n, variance } or { n, sd }. |
+
+| power({ test: "z" \| "proportion", mu0, mu, sigma \| p0, p, n, alpha, alternative }) | Closed-form power as an enclosure (the proportion test by the normal approximation). |
+
+| sampleSize({ margin, p \| sigma, level }) or ({ power, … as power }) | { n }: the smallest whole n proven to meet the margin or the power. |
 
 | varianceTest(data, v0), fTest(x, y, { ratio }) | Chi-square test of one variance; F test of a ratio of two. |
 
@@ -645,6 +649,10 @@ quantile(data, "0.9", { method: "lower" });    // 7: always one of the data valu
 | inverse | the least value whose cumulative proportion reaches p |
 
 | lower, higher, nearest, midpoint | the linear position, moved to a data value below, above or nearest, or the midpoint of the two |
+
+| halves | quartiles only: the medians of the lower and upper halves, leaving the median out when n is odd. This is how most school textbooks and the TI-84 find Q1​ and Q3​. |
+
+| tukey | quartiles only: the same with the median kept in both halves (Tukey's hinges) |
 
 ### Counts
 
@@ -1328,6 +1336,12 @@ meanInterval(drug1, { alternative: "greater" });   // { low: …, high: null }: 
 zTest([102, 98, 110, 105, 95, 108, 101, 99], { mu: 100, sigma: 5 });   // σ known: p = 0.203092
 ```
 
+Textbook problems often give only a summary. `meanInterval` takes `{ n, mean, sd }` (or `variance`) in place of the data, with the sample standard deviation (divisor n−1); with `sigma` it is the z interval. For power and sample sizes see [Power and sample size](https://ratmath.com/stats/power.html).
+
+```js
+meanInterval({ n: 16, mean: "25.3", sd: "4.2" });   // t interval: 23.0620 to 27.5380 (t* = 2.1314, SE = 1.05)
+```
+
 ### Try it
 
 ```js
@@ -1341,6 +1355,9 @@ PRINT("95% interval for the mean difference:", show(ci.low, 4), "to", show(ci.hi
 PRINT(String(tTest(drug2, drug1)), " df =", show(tTest(drug2, drug1).df, 4));
 // the interval is where the test keeps: just outside it, the test rejects
 PRINT(tTest(drug2, drug1, { paired: true, mu: ci.high.add(new Rational(1, 1000)) }).decision("0.05"));
+// from a summary only: n = 16, x̄ = 25.3, s = 4.2
+const fromSummary = meanInterval({ n: 16, mean: "25.3", sd: "4.2" });
+PRINT("summary interval:", show(fromSummary.low, 4), "to", show(fromSummary.high, 4));
 tTest(drug2, drug1, { paired: true, alternative: "greater" }).pValue
 ```
 
@@ -1371,6 +1388,8 @@ varianceInterval(drug1);          // σ² between 1.5142… and 10.6670…; esti
 varianceTest(drug1, 4).statistic; // 5761/800 = (n − 1)s²/σ0², exactly
 String(varianceTest(drug1, 4));   // "chi-square test for a variance: p = 0.767649 (certified, two-sided)"
 ```
+
+With only a summary, pass `{ n, variance }` or `{ n, sd }`: `varianceInterval({ n: 10, variance: 4 })` is (36/19.023,36/2.7004)≈(1.8925,13.331).
 
 The two-sided p-value of an asymmetric statistic is twice the smaller tail, capped at 1.
 
@@ -1483,6 +1502,72 @@ for (const n of [60, 240, 960]) {
   PRINT(n, "rolls:", counts.join(" "), " X² =", show(t.statistic, 3), " p =", show(t.pValue, 4));
 }
 chiSquareTest([[20, 30, 25], [30, 15, 30]]).contributions
+```
+
+---
+
+Page: https://ratmath.com/stats/power.html
+
+Inference
+
+## Power and sample size
+
+Before collecting data: how likely is the test to detect an effect of a given size, and how many observations does it need? For the z test and the one-proportion test the textbook answers are formulas in normal quantiles. Here the quantiles are certified, so the power is an interval certain to contain it, and a sample size is the smallest whole number proven to meet the target.
+
+### Power of the z test
+
+Test H0​:μ=μ0​ with known σ and n observations. Under the alternative μ the statistic Z=(xˉ−μ0​)n​/σ is normal with mean δ=(μ−μ0​)n​/σ and variance 1, so for H1​:μ>μ0​
+
+power=P(Z>z1−α​)=1−Φ(z1−α​−δ),
+and for a two-sided test Φ(−z1−α/2​+δ)+Φ(−z1−α/2​−δ), both tails counted. `power` returns that number as an enclosure.
+
+```js
+import { power, sampleSize, show } from "@ratmath/stats";
+
+const p = power({ mu0: 100, mu: 106, sigma: 15, n: 25, alternative: "greater" });
+show(p.power);     // "0.638760": reject when x̄ > 104.935, and P(Z > −0.355) ≈ 0.6388
+power({ test: "proportion", p0: "0.5", p: "0.6", n: 100, alternative: "greater" }).power;   // ≈ 0.6415
+```
+
+The one-proportion version uses the normal approximation, as textbooks do: the cut-offs come from the standard error under p0​, the spread of p^​ from the one under p. For other tests, where no closed form is standard, [`powerCurve`](https://ratmath.com/stats/experiments.html) estimates power by simulation.
+
+### Sample size for a margin of error
+
+A 95% interval for a proportion has half-width zp(1−p)/n​, so a margin of at most m needs n≥z2p(1−p)/m2, with p=21​ when nothing is known (the largest p(1−p)). For a mean with known σ, n≥(zσ/m)2. The bound is enclosed and rounded up only once its enclosure lies within one whole step, so the answer is never off by one.
+
+```js
+sampleSize({ margin: "0.03" }).n;             // 1068: (1.96/0.03)²·¼ = 1067.1
+sampleSize({ margin: 2, sigma: 10 }).n;       // 97: (1.96·10/2)² = 96.04
+```
+
+### Sample size for a target power
+
+With `power` given, `sampleSize` finds the smallest n whose power is proven to reach it: the power grows with n, so it doubles n until the target is met and then bisects. For a one-sided z test this agrees with the formula n≥((z1−α​+z1−β​)σ/δ)2; for a two-sided test it also counts the far tail, which the formula ignores.
+
+```js
+sampleSize({ power: "0.8", mu0: 100, mu: 106, sigma: 15, alternative: "greater" }).n;   // 39
+sampleSize({ power: "0.9", mu0: 0, mu: "0.5", sigma: 1 }).n;                          // 43
+```
+
+### Try it
+
+```js
+// Power of the one-sided z test as the true mean moves away from 100
+for (const mu of [101, 103, 106, 109, 112]) {
+  PRINT(`μ = ${mu}:`, show(power({ mu0: 100, mu, sigma: 15, n: 25, alternative: "greater" }).power, 4));
+}
+// The sample size that gives 80% power, and its power
+const s = sampleSize({ power: "0.8", mu0: 100, mu: 106, sigma: 15, alternative: "greater" });
+PRINT("n =", s.n, " power", show(s.power, 4), " (one fewer:", show(power({ mu0: 100, mu: 106, sigma: 15, n: s.n - 1, alternative: "greater" }).power, 4) + ")");
+// Check by simulation: how often does the z test reject with n = 39?
+const r = rng(7);
+let reject = 0;
+for (let k = 0; k < 200; k++) {
+  const xs = normal(106, 15).samples(s.n, r).map((x) => x.toFixed(2));
+  if (toNumber(zTest(xs, { mu: 100, sigma: 15, alternative: "greater" }).pValue) < 0.05) reject++;
+}
+PRINT("simulated power with n = 39:", reject / 200);
+sampleSize({ margin: "0.03" })
 ```
 
 ---

@@ -252,8 +252,21 @@ export interface TTestResult extends TestResult {
 export function zTest(data: Num[], options: { sigma: Num; mu?: Num; alternative?: Alternative; bits?: number }): TTestResult;
 export function tTest(x: Num[], options?: { mu?: Num; alternative?: Alternative; bits?: number }): TTestResult;
 export function tTest(x: Num[], y: Num[], options?: { mu?: Num; paired?: boolean; equalVariance?: boolean; alternative?: Alternative; bits?: number }): TTestResult;
-export function meanInterval(data: Num[], options?: { level?: Num; sigma?: Num; alternative?: Alternative; bits?: number }): Interval;
-export function varianceInterval(data: Num[], options?: { level?: Num; bits?: number }): Interval & { sd: { low: Rational; high: Rational } };
+/** A summary in place of data: the sample size, mean and sample sd (or variance, divisor n − 1). */
+export interface SampleSummary { n: number | bigint | Num; mean?: Num; sd?: Num; variance?: Num }
+export function meanInterval(data: Num[] | SampleSummary, options?: { level?: Num; sigma?: Num; alternative?: Alternative; bits?: number }): Interval;
+export function varianceInterval(data: Num[] | SampleSummary, options?: { level?: Num; bits?: number }): Interval & { sd: { low: Rational; high: Rational } };
+
+export interface PowerSpec {
+  test?: "z" | "proportion";
+  mu0?: Num; mu?: Num; sigma?: Num;
+  p0?: Num; p?: Num;
+  alpha?: Num; alternative?: Alternative; bits?: number;
+}
+/** Closed-form power of the z test or the one-proportion z test (normal approximation). */
+export function power(spec: PowerSpec & { n: number }): { power: Rational | RationalInterval; test: "z" | "proportion"; n: number; alpha: Rational; alternative: Alternative; kind: string; note?: string };
+/** The smallest whole n proven to give the margin of error, or (with power) to reach the target power. */
+export function sampleSize(spec: { margin: Num; p?: Num; sigma?: Num; level?: Num } | (PowerSpec & { power: Num })): { n: number; [key: string]: unknown };
 export function varianceTest(data: Num[], variance0: Num, options?: { alternative?: Alternative; bits?: number }): TestResult & { statistic: Rational; df: number };
 export function fTest(x: Num[], y: Num[], options?: { ratio?: Num; alternative?: Alternative; bits?: number }): TestResult & { statistic: Rational; df: [number, number]; interval(options?: { level?: Num }): Interval };
 export function proportionTest(successes: number, trials: number, p0?: Num, options?: { alternative?: Alternative; correct?: boolean; bits?: number }): TTestResult;

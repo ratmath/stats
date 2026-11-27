@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="https://ratmath.com/assets/katex/0.19.1/katex.min.css">
-<link rel="stylesheet" href="assets/style.css?v=8a85435484">
-<script type="module" src="assets/site.js?v=8a85435484"></script>
+<link rel="stylesheet" href="assets/style.css?v=aeec1751d1">
+<script type="module" src="assets/site.js?v=aeec1751d1"></script>
 </head>
 <body>
 <div class="shell">
@@ -36,6 +36,7 @@ import { varianceInterval, varianceTest, fTest, proportionTest, show } from "@ra
 varianceInterval(drug1);          // σ² between 1.5142… and 10.6670…; estimate 3.200556; sd from 1.2305 to 3.2660
 varianceTest(drug1, 4).statistic; // 5761/800 = (n − 1)s²/σ0², exactly
 String(varianceTest(drug1, 4));   // "chi-square test for a variance: p = 0.767649 (certified, two-sided)"</code></pre>
+<p>With only a summary, pass <code>{ n, variance }</code> or <code>{ n, sd }</code>: <code>varianceInterval({ n: 10, variance: 4 })</code> is <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>36</mn><mi mathvariant="normal">/</mi><mn>19.023</mn><mo separator="true">,</mo><mn>36</mn><mi mathvariant="normal">/</mi><mn>2.7004</mn><mo stretchy="false">)</mo><mo>≈</mo><mo stretchy="false">(</mo><mn>1.8925</mn><mo separator="true">,</mo><mn>13.331</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(36/19.023, 36/2.7004) \approx (1.8925, 13.331)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">36/19.023</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">36/2.7004</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1.8925</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">13.331</span><span class="mclose">)</span></span></span></span>.</p>
 <p>The two-sided p-value of an asymmetric statistic is twice the smaller tail, capped at 1.</p>
 
 <h2>Two variances</h2>
