@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Review of batches A3 and A10 (Course Test B1): `fromDensity` on an unbounded
+  support now says its nonnegativity check stops at the window it proved
+  ("not checked beyond that"), instead of claiming a leading-term argument it
+  does not make.
 - `fromDensity(f, support, { normalize })`: a continuous distribution from a
   density formula or a list of pieces, proven nonnegative with mass 1 (exactly
   for polynomial pieces, which keep the CDF and moments exact).
