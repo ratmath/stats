@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Requires Core 0.12: the `@ratmath/core` peer range is now `>=0.12.0` (Core 0.12 returns Integers from `floor`/`ceil`/`trunc`/`round` and rounds half up by default).
 - `fromDensity` no longer presents an enclosure of the mass that contains 1 as
   a proof: `checks.massProven` (true only for an exact mass) and
   `checks.massEnclosure` are added, and `{ requireExactMass: true }` refuses
