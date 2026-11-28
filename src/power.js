@@ -95,8 +95,8 @@ function openProbability(v, what) {
 function ceilOf(make) {
   for (let bits = 64; bits <= 4096; bits *= 2) {
     const v = make(bits);
-    const lo = lowOf(v).ceil();
-    const hi = highOf(v).ceil();
+    const lo = BigInt(lowOf(v).ceil());
+    const hi = BigInt(highOf(v).ceil());
     if (lo === hi) return { n: lo, value: v };
   }
   refuse("precision", "the sample size is too close to a whole number to settle");
