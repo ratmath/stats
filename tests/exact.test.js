@@ -99,7 +99,8 @@ describe("finite probability", () => {
     const heads = S.coin("1/3").power(3).map((t) => t.filter((c) => c === "H").length);
     expect(str(heads.p(2))).toBe("2/9");
     expect(S.coin().product(S.die(), ["x", "y"]).size).toBe(24);
-    expect(() => S.dice(9)).toThrow(/limit/);
+    expect(S.dice(9).size).toBe(10077696);
+    expect(() => S.dice(9).entries).toThrow(/limit/);
     expect(str(heads)).toContain("3: 1/27");
     expect(S.dice(2).toString()).toContain("36 outcomes");
   });
