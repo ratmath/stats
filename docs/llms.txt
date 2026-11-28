@@ -2,7 +2,7 @@
 
 > Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. Part of the RatMath Shelf; numbers come from @ratmath/core (a peer dependency). ESM: `import * as stats from "@ratmath/stats"`.
 
-Built from 0.3.0, commit 38c01b8 plus uncommitted changes. `file:line` is relative to the package root (also node_modules/@ratmath/stats/); on GitHub: https://github.com/ratmath/stats/blob/38c01b8/<file>#L<line>. Docs pages are under https://ratmath.com/stats/. Full types: index.d.ts.
+Built from 0.3.0, commit 8f9d83c plus uncommitted changes. `file:line` is relative to the package root (also node_modules/@ratmath/stats/); on GitHub: https://github.com/ratmath/stats/blob/8f9d83c/<file>#L<line>. Docs pages are under https://ratmath.com/stats/. Full types: index.d.ts.
 
 Types: `type Num = Rational | number | bigint | string`; `type Value = Rational | RationalInterval`; `type Datum = Num | RationalInterval | [Num, Num]`; `type Seed = number | string | bigint`; `type Alternative = "two-sided" | "greater" | "less"`; `type Event<T> = ((outcome: T) => boolean) | Set<T> | T`; `type QuantileMethod = "linear" | "weibull" | "hazen" | "median-unbiased" | "inverse" | "lower" | "higher" | "nearest" | "midpoint" | "halves" | "tukey"`; `type DensityPiece = [string, [Num | "inf" | "-inf", Num | "inf" | "-inf"]]`; `type Family = "normal" | "exponential" | "poisson" | "bernoulli" | "binomial" | "geometric" | "uniform" | "gamma" | "beta" | "lognormal"`; `type Predictors = Num[] | Num[][] | Record<string, Num[]>`; `type Source = Continuous | Discrete | Finite<any> | ((rng: Random) => Num) | Num`; `type DataSource<D> = { model: Model; n: number } | { draw: (rng: Random, run: number) => D }`; `type RankMethod = "auto" | "exact" | "normal"`; `type State = string | number`
 
@@ -22,14 +22,14 @@ name(params) → result — meaning · file:line · docs page
 - `compare(value: Value, level: Num) → "below" | "above" | "equal" | "too close to call"` — Is the value known to be below, above, or not separable from the level? · src/num.js:180 · certified-answers
 - `sqrt(v: Datum, bits?: number) → Value` — √q: the exact rational when q is a perfect square, otherwise a certified enclosure. · src/num.js:132
 - `toNumber(v: Value | number) → number` — The midpoint of a value as a JS number. · src/num.js:147 · certified-answers
-- `Finite class: entries, size, count, outcomes, each, sum, support, p, prob, given, filter, map` — A finite distribution: outcomes with exact rational probabilities that add up to 1. · src/finite.js:70 · reference
-- `finite(outcomes: T[], weights?: Num[], options?: { normalize?: boolean }) → Finite<T> (+2 overloads)` — A finite distribution from an array of outcomes equally likely; a repeated outcome counts each time an array and weights finite(["a", "b"], ["1/3", "2/3"])… · src/finite.js:543 · finite-probability
-- `die(sides?: number) → Finite<number>` — A fair die: the numbers 1 to sides. · src/finite.js:567 · finite-probability
-- `dice(n: number, sides?: number) → Finite<number[]>` — n dice thrown together: outcomes are tuples. · src/finite.js:569 · finite-probability
-- `coin(p?: Num) → Finite<"H" | "T">` — A coin showing "H" with probability p. · src/finite.js:571 · finite-probability
-- `deck() → string[]` — A standard deck of 52 cards, as text such as "Q♥". · src/finite.js:576 · finite-probability
-- `draw(items: T[], k: number, options?: { replace?: boolean; ordered?: boolean }) → Finite<T[]>` — Drawing k of the items, every result equally likely. { replace: false, ordered: false } a hand: k distinct items, order ignored (the default) { ordered:… · src/finite.js:588 · finite-probability
-- `bayes( prior: Finite<T> | Record<string, Num> | Map<T, Num>, likelihood: ((hypothesis: T) => Num) | Record<string, Num> | Map<T, Num>, ) → { posterior: Finite<T>; evidence: Rational; table: { hypothesis: T; prior: Rational …` — Bayes' rule on a finite set of hypotheses. · src/finite.js:601 · finite-probability
+- `Finite class: entries, size, count, outcomes, each, sum, support, p, prob, given, filter, map` — A finite distribution: outcomes with exact rational probabilities that add up to 1. · src/finite.js:92 · reference
+- `finite(outcomes: T[], weights?: Num[], options?: { normalize?: boolean }) → Finite<T> (+2 overloads)` — A finite distribution from an array of outcomes equally likely; a repeated outcome counts each time an array and weights finite(["a", "b"], ["1/3", "2/3"])… · src/finite.js:565 · finite-probability
+- `die(sides?: number) → Finite<number>` — A fair die: the numbers 1 to sides. · src/finite.js:589 · finite-probability
+- `dice(n: number, sides?: number) → Finite<number[]>` — n dice thrown together: outcomes are tuples. · src/finite.js:591 · finite-probability
+- `coin(p?: Num) → Finite<"H" | "T">` — A coin showing "H" with probability p. · src/finite.js:593 · finite-probability
+- `deck() → string[]` — A standard deck of 52 cards, as text such as "Q♥". · src/finite.js:598 · finite-probability
+- `draw(items: T[], k: number, options?: { replace?: boolean; ordered?: boolean }) → Finite<T[]>` — Drawing k of the items, every result equally likely. { replace: false, ordered: false } a hand: k distinct items, order ignored (the default) { ordered:… · src/finite.js:610 · finite-probability
+- `bayes( prior: Finite<T> | Record<string, Num> | Map<T, Num>, likelihood: ((hypothesis: T) => Num) | Record<string, Num> | Map<T, Num>, ) → { posterior: Finite<T>; evidence: Rational; table: { hypothesis: T; prior: Rational …` — Bayes' rule on a finite set of hypotheses. · src/finite.js:623 · finite-probability
 - `Discrete class: kind, name, min, max, mean, variance, mode, pmf, cdf, sf, prob, quantile, median, sd, sample, samples, toFinite, toString` — A distribution on whole numbers. pmf(k) P(X = k) cdf(k) P(X ≤ k) sf(k) P(X > k) prob(a, b) P(a ≤ X ≤ b) quantile(p) the least k with P(X ≤ k) ≥ p mean,… · src/discrete-dists.js:28
 - `bernoulli(p: Num) → Discrete` — One trial: 1 with probability p, otherwise 0. · src/discrete-dists.js:123 · reference
 - `binomial(n: number, p: Num) → Discrete` — The number of successes in n independent trials, each succeeding with probability p. · src/discrete-dists.js:134 · discrete-distributions
