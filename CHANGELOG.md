@@ -9,6 +9,17 @@
 - `sampleSize` returns `n` as an exact bigint above 2^53 − 1 instead of a
   rounded Number, and with no effect (mu = mu0, p = p0) returns n = 1 for a
   target power up to alpha instead of throwing.
+- Products are implicit: `product`, `power` and `dice` keep their independent
+  parts instead of listing every tuple (seven dice used to take about 190 MB
+  and nine were refused). One outcome's probability multiplies the parts,
+  `marginal` returns the parts, `prob(event)` and `map(f)` stream the outcomes
+  one at a time with integer weights and divide once, `prob(event, given)`
+  counts both in one pass, and `sample` reads each part off one integer.
+  Answers, outcome order and seeded samples are unchanged; listing (`entries`,
+  `outcomes`, `table`, `given`) is still limited to two million outcomes.
+  New: `count` (bigint), `factors`, `each()`, and `sum()` (the total of tuple
+  coordinates, by convolution for a product). Docs: a "Many dice" page.
+  Found by Astra's dice storage report.
 - Review of batches A3 and A10 (Course Test B1): `fromDensity` on an unbounded
   support now says its nonnegativity check stops at the window it proved
   ("not checked beyond that"), instead of claiming a leading-term argument it

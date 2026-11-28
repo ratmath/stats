@@ -1,6 +1,6 @@
 # @ratmath/stats 0.3.0: full documentation
 
-> Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. From https://ratmath.com/stats/, commit baa8c28. Each page ends with a runnable example; in it, PRINT(...) prints.
+> Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. From https://ratmath.com/stats/, commit 38c01b8. Each page ends with a runnable example; in it, PRINT(...) prints.
 
 
 ---
@@ -164,6 +164,8 @@ Arguments the library cannot work with are refused with a `StatsError` carrying 
 | Finite: cdf, quantile, median, modes, support | For numeric outcomes. |
 
 | Finite: sample, samples, table, entries, outcomes, size | Seeded draws; rows { outcome, probability }. |
+
+| Finite: count, factors, each, sum | The exact number of outcomes (a bigint); the independent parts of a product (null for a table); each [outcome, probability] in turn without listing; the distribution of the sum of tuple coordinates, by convolution for a product. See Many dice. |
 
 ### Discrete distributions
 
@@ -467,7 +469,7 @@ draw(deck(), 2).size;                          // 1326 two-card hands, each equa
 `map` sends each outcome through a function and adds up the probabilities that land together: that is the distribution of a random variable. `given` keeps the outcomes of an event and divides by its probability,
 
 P(A∣B)=P(B)P(A∩B)​,
-and refuses when P(B)=0. `draw(items, k)` lists hands of k distinct items; with `{ ordered: true }` the order drawn matters, and with `{ replace: true, ordered: true }` items are put back. A finite distribution lists its outcomes, so it is limited to two million of them; for five-card hands, count with [`hypergeometric`](https://ratmath.com/stats/discrete-distributions.html) instead of listing.
+and refuses when P(B)=0. `draw(items, k)` lists hands of k distinct items; with `{ ordered: true }` the order drawn matters, and with `{ replace: true, ordered: true }` items are put back. A listed distribution is limited to two million outcomes; for five-card hands, count with [`hypergeometric`](https://ratmath.com/stats/discrete-distributions.html) instead of listing. Products such as `dice(9)` are not listed at all: they keep their independent parts and stream when needed (see [Many dice](https://ratmath.com/stats/many-dice.html)).
 
 ### Expectation and spread
 
@@ -517,6 +519,92 @@ PRINT("after two positives:", String(second.posterior));
 const total = die().sumOf(3);
 PRINT("modes:", total.modes().join(" and "), "each with probability", String(total.p(10)));
 total.prob((s) => s >= 16)
+```
+
+---
+
+Page: https://ratmath.com/stats/many-dice.html
+
+Exact
+
+## Many dice
+
+Seven dice have 279,936 ordered rolls and nine have over ten million. A product of independent parts is kept as its parts, and each question is answered in the cheapest exact way: one roll by multiplying, a total by convolution, any other event by streaming the rolls one at a time and counting.
+
+### A product is its parts
+
+```js
+import { die, dice, coin, finite, rng } from "@ratmath/stats";
+
+const nine = dice(9);          // immediate: nothing is listed
+nine.count;                    // 10077696n
+nine.factors.length;           // 9, each one die()
+nine.p([1, 2, 3, 4, 5, 6, 1, 2, 3]);   // 1/10077696
+nine.marginal(4);              // die() itself
+nine.marginal(0, 8);           // two dice, still implicit
+```
+
+`product`, `power` and `dice` keep the independent parts. The probability of one outcome is the product of the parts' probabilities,
+
+P(a1​,…,ak​)=i=1∏k​Pi​(ai​),
+and a marginal of an independent product is just the part, so neither needs the other outcomes. `count` is the exact number of outcomes as a bigint; `size` is the same as a number.
+
+### Totals by convolution
+
+```js
+dice(7).sum().p(24);            // 24017/279936
+dice(20).sum().p(70);           // exact, from 20 convolutions of six faces
+die().sumOf(20).p(70);          // the same, by repeated doubling
+```
+
+The sum of independent parts has the convolution of their distributions,
+
+P(X+Y=s)=x∑​P(X=x)P(Y=s−x),
+so `sum()` works part by part and the cost grows with the number of totals, not the number of rolls. Twenty dice have 620≈3.7×1015 rolls but only 101 totals.
+
+### Any event, by streaming
+
+```js
+// the first die equals the last, and some die shows a six
+nine.prob((r) => r[0] === r[8] && r.includes(6));       // 1288991/10077696
+nine.prob((r) => r.includes(6), (r) => r[0] === 1);     // 1288991/1679616: conditional, one pass
+nine.map((r) => new Set(r).size);                          // how many different faces show
+for (const [roll, p] of dice(2).each()) { /* one at a time */ }
+```
+
+An event that is not built from the parts has to look at every roll, but it only needs one at a time. The rolls are visited in order like an odometer, each with an integer weight over a common denominator (for fair dice every weight is 1), the weights of the rolls in the event are added as integers, and the total is divided once at the end:
+
+P(A)=69#{ω∈A}​for fair dice, andP(A)=D∑ω∈A​w(ω)​in general.
+Memory stays flat whatever the number of dice; time is about a tenth to a fifth of a second per million rolls on a laptop-class machine. `map` streams the same way and keeps only the distinct values of the function, `prob(event, given)` counts both events in one pass, and `mean`, `variance`, `covariance` and `correlation` of functions go through `map`.
+
+### Sampling and listing
+
+```js
+nine.sample(rng(1));            // nine faces, drawn part by part
+dice(3).entries.length;         // 216: listed on first use
+nine.entries;                   // refused: more than two million outcomes
+```
+
+A sample draws one integer below the common denominator and reads each part off it in turn, so a seeded sample is the same roll the listed table would give. Listing (`entries`, `outcomes`, `table`, and `given`, which lists the outcomes it keeps) is still limited to two million outcomes; everything above works beyond that.
+
+### Try it
+
+```js
+// Nine dice, exactly, without listing ten million rolls.
+const nine = dice(9);
+PRINT("rolls:", String(nine.count));
+PRINT("P(every face shows at least once):", String(nine.prob((r) => new Set(r).size === 6)));
+
+// Totals by convolution
+const total = nine.sum();
+PRINT("most likely totals:", total.modes().join(" and "), "each", String(total.p(31)));
+
+// Loaded dice stream the same way, with integer weights
+const loaded = finite([1, 2, 3, 4, 5, 6], ["1/12", "1/12", "1/12", "1/12", "1/3", "1/3"]);
+PRINT("five loaded dice, at least three sixes:", String(loaded.power(5).prob((r) => r.filter((x) => x === 6).length >= 3)));
+
+// How many different faces show among seven dice?
+dice(7).map((r) => new Set(r).size)
 ```
 
 ---

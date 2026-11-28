@@ -12,7 +12,7 @@ export function keyOf(o) {
   if (o instanceof Integer) return `q${o.value}/1`;
   switch (typeof o) {
     case "number":
-      return Number.isFinite(o) ? keyOf(toQ(o)) : `n${o}`;
+      return Number.isSafeInteger(o) ? `q${o}/1` : Number.isFinite(o) ? keyOf(toQ(o)) : `n${o}`;
     case "bigint":
       return `q${o}/1`;
     case "string":
@@ -36,12 +36,54 @@ const numeric = (o, what) => {
   return refuse("not-numeric", `${what} needs numbers, but an outcome is ${showOutcome(o)}; use map(f) to turn outcomes into numbers`);
 };
 export const showOutcome = (o) => (Array.isArray(o) ? `(${o.map(showOutcome).join(", ")})` : o instanceof Set ? `{${[...o].map(showOutcome).join(", ")}}` : String(o));
-const LIMIT = 2000000;
+/** The most outcomes a distribution will list at once; products of independent parts are kept implicit and may be far larger. */
+export const LIMIT = 2000000;
+const PRODUCT = Symbol("product");
 
+// One factor of an implicit product, laid out for streaming: its outcomes in
+// order, each with an integer weight over the common denominator `den`, and
+// an index from outcome key to position.
+function layout(dist) {
+  const entries = dist.entries;
+  const den = entries.reduce((l, [, p]) => (l * p.denominator) / gcd(l, p.denominator), 1n);
+  const outs = entries.map((e) => e[0]);
+  const w = entries.map(([, p]) => (p.numerator * den) / p.denominator);
+  const index = new Map(outs.map((o, i) => [keyOf(o), i]));
+  return Object.freeze({ dist, outs, w, den, index, uniform: w.every((x) => x === 1n) });
+}
+
+/**
+ * A finite distribution: outcomes with exact rational probabilities that add
+ * up to 1. It is held in one of two ways.
+ *
+ *   a table     every outcome and its probability, listed (finite, map, given, …)
+ *   a product   independent parts, kept implicit (product, power, dice)
+ *
+ * A product of k parts has as many outcomes as the sizes of the parts
+ * multiplied, so it is never listed unless asked: one outcome's probability is
+ * the product of the parts' probabilities, an event's probability is counted
+ * by streaming the outcomes one at a time with integer weights and dividing
+ * once, map(f) keeps only the distinct values of f, marginals are the parts
+ * themselves, and a sample is drawn part by part. Every answer is the same as
+ * for the listed table, outcome order and seeded samples included.
+ */
 export class Finite {
   #index;
+  #parts = null; // the parts of a product, laid out
+  #count = 0n; // the number of outcomes of a product
+  #den = 1n; // the common denominator of a product's outcome probabilities
+  #uniform = false; // every outcome of the product equally likely
+  #listed = null; // a product's entries, once asked for
   /** entries: [outcome, probability] pairs; equal outcomes are merged. The probabilities must add up to 1. */
-  constructor(entries, { normalize = false } = {}) {
+  constructor(entries, { normalize = false, [PRODUCT]: parts } = {}) {
+    if (parts) {
+      this.#parts = Object.freeze(parts.map(layout));
+      this.#count = this.#parts.reduce((n, f) => n * BigInt(f.outs.length), 1n);
+      this.#den = this.#parts.reduce((n, f) => n * f.den, 1n);
+      this.#uniform = this.#parts.every((f) => f.uniform);
+      Object.freeze(this);
+      return;
+    }
     const index = new Map();
     const list = [];
     for (const [o, w] of entries) {
@@ -62,15 +104,121 @@ export class Finite {
       if (!normalize) refuse("bad-argument", `the probabilities add up to ${total}, not 1; pass { normalize: true } to rescale them`);
       for (const e of list) e[1] = e[1].divide(total);
     }
-    this.entries = Object.freeze(list.map((e) => Object.freeze(e)));
+    Object.defineProperty(this, "entries", { value: Object.freeze(list.map((e) => Object.freeze(e))), enumerable: true });
     this.#index = index;
     Object.freeze(this);
   }
+  /**
+   * Every [outcome, probability] pair, in order. A table has them already; a
+   * product lists them on first use, and refuses beyond LIMIT outcomes.
+   */
+  get entries() {
+    if (!this.#listed) {
+      this.#tooMany("list every outcome");
+      const list = [];
+      this.#scan((t, w) => void list.push(Object.freeze([t, this.#q(w)])));
+      this.#listed = Object.freeze(list);
+    }
+    return this.#listed;
+  }
+  /** The number of outcomes, as a number. */
   get size() {
-    return this.entries.length;
+    return this.#parts ? Number(this.#count) : this.entries.length;
+  }
+  /** The number of outcomes, exactly. */
+  get count() {
+    return this.#parts ? this.#count : BigInt(this.entries.length);
+  }
+  /** For a product, the independent parts (one Finite per coordinate); null for a table. */
+  get factors() {
+    return this.#parts ? this.#parts.map((f) => f.dist) : null;
   }
   get outcomes() {
     return this.entries.map((e) => e[0]);
+  }
+  /** Each [outcome, probability] pair in turn, without listing them all; works for products of any size. */
+  *each() {
+    if (!this.#parts) return yield* this.entries;
+    const k = this.#parts.length;
+    const d = new Array(k).fill(0);
+    for (;;) {
+      let w = 1n;
+      const t = this.#parts.map((f, i) => ((w *= f.w[d[i]]), f.outs[d[i]]));
+      yield [t, this.#q(w)];
+      let i = k - 1;
+      while (i >= 0 && ++d[i] === this.#parts[i].outs.length) d[i--] = 0;
+      if (i < 0) return;
+    }
+  }
+  #q(w) {
+    return new Rational(w, this.#den);
+  }
+  #tooMany(what) {
+    if (this.#count > BigInt(LIMIT))
+      refuse(
+        "too-large",
+        `this product has ${this.#count} outcomes, too many to ${what} (the limit is ${LIMIT}); ask for what you need instead: p(outcome), prob(event), map(f), marginal(i), sumOf(n), sample(rng) and each() all work without listing the outcomes`,
+      );
+  }
+  /** A numeric question asked of tuples: refuse it the way a table would, without listing anything. */
+  #notNumeric(what) {
+    return numeric(this.#parts.map((f) => f.outs[0]), what);
+  }
+  /**
+   * Visit every outcome of a product in order: visit(tuple, weight), where the
+   * weight is an integer over #den (1n for every outcome when all are equally
+   * likely). The tuple is a fresh array each time. Returning true stops.
+   */
+  #scan(visit) {
+    const parts = this.#parts;
+    const k = parts.length;
+    const d = new Array(k).fill(0);
+    const t = parts.map((f) => f.outs[0]);
+    const uniform = this.#uniform;
+    const pw = new Array(k);
+    const prefix = (from) => {
+      for (let j = from; j < k; j++) pw[j] = (j ? pw[j - 1] : 1n) * parts[j].w[d[j]];
+    };
+    if (!uniform) prefix(0);
+    for (;;) {
+      if (visit(t.slice(), uniform ? 1n : pw[k - 1])) return;
+      let i = k - 1;
+      while (i >= 0 && ++d[i] === parts[i].outs.length) {
+        d[i] = 0;
+        t[i] = parts[i].outs[0];
+        i--;
+      }
+      if (i < 0) return;
+      t[i] = parts[i].outs[d[i]];
+      if (!uniform) prefix(i);
+    }
+  }
+  /** The total integer weight of the outcomes where holds(tuple) is true. */
+  #weigh(holds) {
+    if (this.#uniform) {
+      let n = 0;
+      this.#scan((t) => {
+        if (holds(t)) n++;
+      });
+      return BigInt(n);
+    }
+    let s = 0n;
+    this.#scan((t, w) => {
+      if (holds(t)) s += w;
+    });
+    return s;
+  }
+  /** Where a tuple sits in the product's order, or -1 when it is not an outcome. */
+  #position(o) {
+    if (!Array.isArray(o) || o.length !== this.#parts.length) return -1n;
+    let r = 0n;
+    for (let i = 0; i < o.length; i++) {
+      const f = this.#parts[i];
+      const at = f.index.get(keyOf(o[i]));
+      if (at === undefined) return -1n;
+      r = r * BigInt(f.outs.length) + BigInt(at);
+    }
+    return r;
   }
   #holds(event) {
     if (typeof event === "function") return event;
@@ -81,8 +229,21 @@ export class Finite {
     const k = keyOf(event);
     return (o) => keyOf(o) === k;
   }
+  /** The distinct outcomes of a Set or single-outcome event, in the product's order. */
+  #members(event) {
+    const seen = new Map();
+    for (const o of event instanceof Set ? event : [event]) {
+      const at = this.#position(o);
+      if (at >= 0n && !seen.has(at)) seen.set(at, this.#parts.map((f, i) => f.outs[f.index.get(keyOf(o[i]))]));
+    }
+    return [...seen.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map((e) => e[1]);
+  }
   /** The probability of one outcome. */
   p(outcome) {
+    if (this.#parts) {
+      if (this.#position(outcome) < 0n) return ZERO;
+      return this.#parts.reduce((s, f, i) => s.multiply(f.dist.p(outcome[i])), ONE);
+    }
     const at = this.#index.get(keyOf(outcome));
     return at === undefined ? ZERO : this.entries[at][1];
   }
@@ -92,8 +253,26 @@ export class Finite {
    * conditional probability P(event | given).
    */
   prob(event, given) {
+    if (given !== undefined && this.#parts) {
+      // Count both events in one pass instead of listing the condition.
+      const g = this.#holds(given);
+      const e = this.#holds(event);
+      let both = 0n;
+      let total = 0n;
+      this.#scan((t, w) => {
+        if (!g(t)) return;
+        total += w;
+        if (e(t)) both += w;
+      });
+      if (total === 0n) refuse("impossible-event", "cannot condition on an event of probability 0");
+      return new Rational(both, total);
+    }
     if (given !== undefined) return this.given(given).prob(event);
     if (typeof event !== "function" && !(event instanceof Set)) return this.p(event);
+    if (this.#parts) {
+      if (event instanceof Set) return this.#members(event).reduce((s, o) => s.add(this.p(o)), ZERO);
+      return this.#q(this.#weigh(event));
+    }
     const holds = this.#holds(event);
     let s = ZERO;
     for (const [o, p] of this.entries) if (holds(o)) s = s.add(p);
@@ -101,30 +280,52 @@ export class Finite {
   }
   /** The distribution conditioned on an event of positive probability. */
   given(event) {
+    if (this.#parts) {
+      let kept;
+      if (typeof event === "function") {
+        kept = [];
+        this.#scan((t, w) => {
+          if (!event(t)) return;
+          if (kept.length === LIMIT) refuse("too-large", `more than ${LIMIT} outcomes satisfy the condition; ask prob(event, given) for a conditional probability instead`);
+          kept.push([t, this.#q(w)]);
+        });
+      } else kept = this.#members(event).map((o) => [o, this.p(o)]);
+      if (!kept.length) refuse("impossible-event", "cannot condition on an event of probability 0");
+      return new Finite(kept, { normalize: true });
+    }
     const holds = this.#holds(event);
     const kept = this.entries.filter(([o]) => holds(o));
     if (!kept.length) refuse("impossible-event", "cannot condition on an event of probability 0");
     return new Finite(kept, { normalize: true });
   }
-  /** The distribution of f(outcome): a random variable. */
+  /** The distribution of f(outcome): a random variable. A product is streamed, keeping only the distinct values. */
   map(f) {
-    return new Finite(this.entries.map(([o, p]) => [f(o), p]));
+    if (!this.#parts) return new Finite(this.entries.map(([o, p]) => [f(o), p]));
+    const index = new Map();
+    const rows = [];
+    this.#scan((t, w) => {
+      const v = f(t);
+      const k = keyOf(v);
+      const at = index.get(k);
+      if (at !== undefined) rows[at][1] += w;
+      else {
+        if (rows.length === LIMIT) refuse("too-large", `the function takes more than ${LIMIT} different values`);
+        index.set(k, rows.length);
+        rows.push([v, w]);
+      }
+    });
+    return new Finite(rows.map(([v, w]) => [v, this.#q(w)]));
   }
   /** Keep only some outcomes and rescale: the same as given(event). */
   filter(event) {
     return this.given(event);
   }
-  /** The joint distribution of independent draws from this and the others: outcomes are tuples. */
+  /**
+   * The joint distribution of independent draws from this and the others:
+   * outcomes are tuples. Nothing is listed; the result keeps the parts.
+   */
   product(...others) {
-    let acc = this.entries.map(([o, p]) => [[o], p]);
-    for (const other of others) {
-      const d = asFinite(other);
-      if (acc.length * d.size > LIMIT) refuse("too-large", `the product would have ${acc.length * d.size} outcomes; the limit is ${LIMIT}`);
-      const next = [];
-      for (const [t, p] of acc) for (const [o, q] of d.entries) next.push([[...t, o], p.multiply(q)]);
-      acc = next;
-    }
-    return new Finite(acc);
+    return new Finite(null, { [PRODUCT]: [this, ...others.map(asFinite)] });
   }
   /** n independent copies, as tuples. */
   power(n) {
@@ -133,6 +334,7 @@ export class Finite {
   }
   /** The distribution of X + Y for an independent Y (numbers only). */
   plus(other) {
+    if (this.#parts) this.#notNumeric("plus");
     const d = asFinite(other);
     const out = [];
     for (const [a, p] of this.entries) for (const [b, q] of d.entries) out.push([numeric(a, "plus").add(numeric(b, "plus")), p.multiply(q)]);
@@ -140,6 +342,7 @@ export class Finite {
   }
   /** The distribution of the sum of n independent copies (numbers only), by repeated doubling. */
   sumOf(n) {
+    if (this.#parts) this.#notNumeric("sumOf");
     let k = whole(n, "the number of copies", { min: 1 });
     let base = this.map((o) => numeric(o, "sumOf"));
     let acc = null;
@@ -150,8 +353,25 @@ export class Finite {
     }
     return acc;
   }
-  /** For tuple outcomes: the distribution of the chosen coordinates. */
+  /**
+   * For tuple outcomes: the distribution of the sum of the coordinates. A
+   * product of numeric parts convolves the parts (no outcome is visited), so
+   * dice(20).sum() is immediate; a table of tuples adds up each outcome.
+   */
+  sum() {
+    if (this.#parts) return this.#parts.map((f) => f.dist.map((o) => numeric(o, "sum"))).reduce((a, b) => a.plus(b));
+    return this.map((o) => {
+      if (!Array.isArray(o)) refuse("bad-argument", "sum needs outcomes that are tuples; for the sum of n independent copies use sumOf(n)");
+      return o.reduce((s, x) => s.add(numeric(x, "sum")), ZERO);
+    });
+  }
+  /** For tuple outcomes: the distribution of the chosen coordinates. For a product these are its parts. */
   marginal(...which) {
+    const parts = this.#parts;
+    if (parts && which.length && which.every((i, j) => Number.isInteger(i) && i >= 0 && i < parts.length && (j === 0 || i > which[j - 1]))) {
+      if (which.length === 1) return parts[which[0]].dist;
+      return new Finite(null, { [PRODUCT]: which.map((i) => parts[i].dist) });
+    }
     return this.map((o) => {
       if (!Array.isArray(o)) refuse("bad-argument", "marginal needs outcomes that are tuples");
       return which.length === 1 ? o[which[0]] : which.map((i) => o[i]);
@@ -177,6 +397,7 @@ export class Finite {
   }
   /** E[f(X)], or E[X] for numeric outcomes. */
   mean(f) {
+    if (this.#parts) return f ? this.map((o) => numeric(f(o), "mean")).mean() : this.#notNumeric("mean");
     let s = ZERO;
     for (const [o, p] of this.entries) s = s.add(numeric(f ? f(o) : o, "mean").multiply(p));
     return s;
@@ -186,6 +407,7 @@ export class Finite {
   }
   /** The k-th moment E[Xᵏ]; with { central: true }, E[(X − μ)ᵏ]. */
   moment(k, { central = false, of } = {}) {
+    if (this.#parts) return of ? this.map(of).moment(k, { central }) : this.#notNumeric("moment");
     const n = whole(k, "the order of the moment");
     const mu = central ? this.mean(of) : ZERO;
     return this.mean((o) => numeric(of ? of(o) : o, "moment").subtract(mu).pow(n));
@@ -198,12 +420,14 @@ export class Finite {
     return sqrt(this.variance(f), bits);
   }
   covariance(f, g) {
+    if (this.#parts) return this.joint(f, g).covariance((o) => o[0], (o) => o[1]);
     const mf = this.mean(f);
     const mg = this.mean(g);
     return this.mean((o) => numeric(f(o), "covariance").subtract(mf).multiply(numeric(g(o), "covariance").subtract(mg)));
   }
   /** The correlation of f and g: exact when it is rational, otherwise certified. */
   correlation(f, g, { bits = 96 } = {}) {
+    if (this.#parts) return this.joint(f, g).correlation((o) => o[0], (o) => o[1], { bits });
     const c = this.covariance(f, g);
     const vv = this.variance(f).multiply(this.variance(g));
     if (vv.numerator === 0n) refuse("undefined", "the correlation is not defined when one variable is constant");
@@ -213,11 +437,13 @@ export class Finite {
   }
   /** The numeric outcomes in increasing order with their probabilities. */
   get support() {
+    if (this.#parts) this.#notNumeric("support");
     return this.entries.map(([o, p]) => [numeric(o, "support"), p]).sort((a, b) => a[0].compareTo(b[0]));
   }
   /** P(X ≤ x). */
   cdf(x) {
     const q = toQ(x, "x");
+    if (this.#parts) this.#notNumeric("cdf");
     let s = ZERO;
     for (const [o, p] of this.entries) if (numeric(o, "cdf").compareTo(q) <= 0) s = s.add(p);
     return s;
@@ -237,14 +463,37 @@ export class Finite {
   median() {
     return this.quantile(Q(1, 2));
   }
-  /** The outcomes of greatest probability. */
+  /** The outcomes of greatest probability. For a product, every combination of the parts' modes. */
   modes() {
+    if (this.#parts) {
+      const each = this.#parts.map((f) => f.dist.modes());
+      const n = each.reduce((m, ms) => m * BigInt(ms.length), 1n);
+      if (n > BigInt(LIMIT)) refuse("too-large", `there are ${n} most likely outcomes, more than the limit of ${LIMIT}; ask each part with factors[i].modes()`);
+      return each.reduce((acc, ms) => acc.flatMap((t) => ms.map((m) => [...t, m])), [[]]);
+    }
     let best = ZERO;
     for (const [, p] of this.entries) if (p.compareTo(best) > 0) best = p;
     return this.entries.filter(([, p]) => p.equals(best)).map((e) => e[0]);
   }
-  /** One outcome drawn with the exact probabilities, from a seeded generator. */
+  /**
+   * One outcome drawn with the exact probabilities, from a seeded generator.
+   * A product draws one integer below the common denominator and reads the
+   * parts off it in turn, the same outcome its listed table would give.
+   */
   sample(rng) {
+    if (this.#parts) {
+      let r = rng.int(this.#den);
+      let rest = this.#den;
+      return this.#parts.map((f) => {
+        rest /= f.den;
+        const s = r / rest;
+        let cum = 0n;
+        let j = 0;
+        while (s >= cum + f.w[j]) cum += f.w[j++];
+        r = ((s - cum) * rest + (r % rest)) / f.w[j];
+        return f.outs[j];
+      });
+    }
     const den = this.entries.reduce((l, [, p]) => (l * p.denominator) / gcd(l, p.denominator), 1n);
     let r = rng.int(den);
     for (const [o, p] of this.entries) {
@@ -266,8 +515,11 @@ export class Finite {
     return rows;
   }
   toString() {
-    const shown = this.entries.slice(0, 12).map(([o, p]) => `${showOutcome(o)}: ${p}`);
-    return `{ ${shown.join(", ")}${this.size > 12 ? `, … (${this.size} outcomes)` : ""} }`;
+    const first = [];
+    if (this.#parts) this.#scan((t, w) => first.push([t, this.#q(w)]) === 12);
+    else first.push(...this.entries.slice(0, 12));
+    const shown = first.map(([o, p]) => `${showOutcome(o)}: ${p}`);
+    return `{ ${shown.join(", ")}${this.count > 12n ? `, … (${this.count} outcomes)` : ""} }`;
   }
   [Symbol.for("nodejs.util.inspect.custom")]() {
     return `Finite ${this.toString()}`;

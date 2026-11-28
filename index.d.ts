@@ -32,7 +32,15 @@ export class Finite<T = unknown> {
   constructor(entries: Iterable<[T, Num]>, options?: { normalize?: boolean });
   readonly entries: readonly (readonly [T, Rational])[];
   readonly size: number;
+  /** The exact number of outcomes. */
+  readonly count: bigint;
+  /** For a product (product, power, dice), its independent parts; null for a listed table. */
+  readonly factors: Finite<any>[] | null;
   readonly outcomes: T[];
+  /** Each [outcome, probability] in turn, without listing them all. */
+  each(): IterableIterator<[T, Rational]>;
+  /** For tuple outcomes, the distribution of the sum of the coordinates (by convolution for a product). */
+  sum(): Finite<Rational>;
   readonly support: T[];
   p(outcome: T): Rational;
   prob(event: Event<T>, given?: Event<T>): Rational;

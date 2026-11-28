@@ -1,8 +1,8 @@
 // Shared page furniture for the stats docs: the contents column, the theme
 // switch and the code boxes. Add each topic page to PAGES as it is written.
 
-import * as A from "./stats.js?v=37a4d73717";
-import { mountRunboxes } from "./runbox.js?v=37a4d73717";
+import * as A from "./stats.js?v=4743369b49";
+import { mountRunboxes } from "./runbox.js?v=4743369b49";
 
 export { A };
 
@@ -12,6 +12,7 @@ export const PAGES = [
   { href: "explore.html", title: "Explore" },
   { group: "Exact" },
   { href: "finite-probability.html", title: "Finite probability", blurb: "Sample spaces, conditioning, expectation and Bayes' rule in fractions" },
+  { href: "many-dice.html", title: "Many dice", blurb: "Independent products kept implicit: stream, convolve and sample millions of rolls exactly" },
   { href: "discrete-distributions.html", title: "Discrete distributions", blurb: "Binomial, hypergeometric, geometric and Poisson probabilities" },
   { href: "descriptive.html", title: "Descriptive statistics", blurb: "Exact means, variances, named quantile rules, least squares" },
   { href: "exact-tests.html", title: "Exact tests", blurb: "Binomial, Fisher and permutation tests with p-values as fractions" },
