@@ -407,7 +407,7 @@ export function kolmogorovCdf(n, d) {
   if (D.compareTo(ONE) >= 0) return ONE;
   const nd = D.multiply(Q(N));
   // k = ⌈nd⌉
-  const K = Math.max(1, Number(nd.denominator === 1n ? nd.numerator : nd.floor() + 1n));
+  const K = Math.max(1, Number(nd.denominator === 1n ? nd.numerator : BigInt(nd.floor()) + 1n));
   const h = Q(K).subtract(nd);
   const m = 2 * K - 1;
   const fact = [ONE];

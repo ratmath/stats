@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `fromDensity` no longer presents an enclosure of the mass that contains 1 as
+  a proof: `checks.massProven` (true only for an exact mass) and
+  `checks.massEnclosure` are added, and `{ requireExactMass: true }` refuses
+  such densities. (1 + 10⁻⁵⁰)·cos(x)/sin(1) on [0, 1] was accepted as "proven".
+- `sampleSize` returns `n` as an exact bigint above 2^53 − 1 instead of a
+  rounded Number, and with no effect (mu = mu0, p = p0) returns n = 1 for a
+  target power up to alpha instead of throwing.
 - Products are implicit: `product`, `power` and `dice` keep their independent
   parts instead of listing every tuple (seven dice used to take about 190 MB
   and nine were refused). One outcome's probability multiplies the parts,

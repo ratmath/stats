@@ -207,7 +207,7 @@ export class Continuous {
   readonly fast: { pdf(x: number): number; cdf(x: number): number; quantile(p: number): number };
   /** Set on distributions built by fromDensity: the normalizing factor (or 1) and how f ≥ 0 and the mass were established. */
   readonly constant?: Rational;
-  readonly checks?: { nonnegative: string; mass: "exact" | "enclosure" };
+  readonly checks?: { nonnegative: string; mass: "exact" | "enclosure"; massProven: boolean; massEnclosure?: RationalInterval };
   /** The pieces of a density built by fromDensity, transform or orderStatistic. */
   readonly pieces?: Array<{ from: Rational | null; to: Rational | null; density: string }>;
   /** The distribution of g(X), for g proven monotone on the support. */
@@ -287,7 +287,7 @@ export interface PowerSpec {
 /** Closed-form power of the z test or the one-proportion z test (normal approximation). */
 export function power(spec: PowerSpec & { n: number }): { power: Rational | RationalInterval; test: "z" | "proportion"; n: number; alpha: Rational; alternative: Alternative; kind: string; note?: string };
 /** The smallest whole n proven to give the margin of error, or (with power) to reach the target power. */
-export function sampleSize(spec: { margin: Num; p?: Num; sigma?: Num; level?: Num } | (PowerSpec & { power: Num })): { n: number; [key: string]: unknown };
+export function sampleSize(spec: { margin: Num; p?: Num; sigma?: Num; level?: Num } | (PowerSpec & { power: Num })): { n: number | bigint; [key: string]: unknown };
 export function varianceTest(data: Num[], variance0: Num, options?: { alternative?: Alternative; bits?: number }): TestResult & { statistic: Rational; df: number };
 export function fTest(x: Num[], y: Num[], options?: { ratio?: Num; alternative?: Alternative; bits?: number }): TestResult & { statistic: Rational; df: [number, number]; interval(options?: { level?: Num }): Interval };
 export function proportionTest(successes: number, trials: number, p0?: Num, options?: { alternative?: Alternative; correct?: boolean; bits?: number }): TTestResult;

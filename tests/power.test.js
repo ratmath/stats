@@ -57,6 +57,19 @@ describe("power", () => {
     near(power({ mu0: 0, mu: 0, sigma: 1, n: 10 }).power, 0.05, 1e-12);
   });
 
+  test("with no effect, n = 1 reaches a target power up to alpha and nothing reaches more", () => {
+    expect(sampleSize({ power: "0.04", mu0: 0, mu: 0, sigma: 1 }).n).toBe(1);
+    expect(sampleSize({ power: "0.04", test: "proportion", p0: "0.3", p: "0.3" }).n).toBe(1);
+    expect(() => sampleSize({ power: "0.5", mu0: 0, mu: 0, sigma: 1 })).toThrow(/never reaches/);
+  });
+
+  test("a sample size above 2^53 comes back as an exact bigint", () => {
+    // (1.959963…/10⁻⁹)²: both ends of the enclosure have the same ceiling
+    const r = sampleSize({ margin: "1/1000000000", sigma: 1 });
+    expect(r.n).toBe(3841458820694125959n);
+    expect(sampleSize({ margin: 2, sigma: 10 }).n).toBe(97);
+  });
+
   test("agrees with simulation (seeded)", () => {
     const r = rejectionRate({
       draw: (rand) => normal(106, 15).samples(25, rand).map((x) => x.toFixed(3)),

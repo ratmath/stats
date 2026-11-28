@@ -1,6 +1,6 @@
 # @ratmath/stats 0.3.0: full documentation
 
-> Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. From https://ratmath.com/stats/, commit baa8c28. Each page ends with a runnable example; in it, PRINT(...) prints.
+> Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. From https://ratmath.com/stats/, commit 38c01b8. Each page ends with a runnable example; in it, PRINT(...) prints.
 
 
 ---
@@ -1014,7 +1014,7 @@ Probability courses hand out densities like f(x)=cx2 on [0,2] and ask for c, the
 
 ### A density from a formula
 
-A function f is a density on its support when f≥0 there and ∫f=1. `fromDensity` proves both before it builds anything. For a polynomial piece the sign is decided between its isolated real roots and the mass comes from the antiderivative, so both facts are exact. For any other formula, f≥0 is shown by interval evaluation on ever smaller pieces and the mass by analytic's certified integral, which must enclose 1. With `{ normalize: true }` the formula is divided by its mass, reported as `constant`.
+A function f is a density on its support when f≥0 there and ∫f=1. `fromDensity` checks both before it builds anything. For a polynomial piece the sign is decided between its isolated real roots and the mass comes from the antiderivative, so both facts are exact and proven. For any other formula, f≥0 is proven by interval evaluation on ever smaller pieces (on an unbounded support only over a window, which `checks.nonnegative` names), and the mass is enclosed by analytic's certified integral. An enclosure that misses 1 proves the mass is wrong and the density is refused. An enclosure that contains 1 proves only that the mass is within its width of 1: (1+10−50)cosx/sin1 on [0,1] has mass 1+10−50 and passes. Such a density is accepted with `checks.massProven` false and the interval in `checks.massEnclosure`; pass `{ requireExactMass: true }` to refuse it instead. With `{ normalize: true }` the formula is divided by its mass, reported as `constant`.
 
 ```js
 import { fromDensity, show } from "@ratmath/stats";
@@ -1036,7 +1036,7 @@ T.variance;    // 1/6 = 1/12 + 1/12
 fromDensity("exp(-x)", [0, "inf"]).cdf(1);   // ≈ 0.632121 = 1 − 1/e
 ```
 
-`checks` records how f≥0 and the mass were established, so a reader can see which facts are exact and which rest on an enclosure.
+`checks` records how f≥0 and the mass were established, so a reader can see which facts are exact and which rest on an enclosure: `massProven` is true only for an exact mass.
 
 ### A function of a random variable
 
@@ -1717,9 +1717,11 @@ sampleSize({ margin: "0.03" }).n;             // 1068: (1.96/0.03)²·¼ = 1067.
 sampleSize({ margin: 2, sigma: 10 }).n;       // 97: (1.96·10/2)² = 96.04
 ```
 
+`n` is a JavaScript number while it is exact as one; above 253−1 it is returned as a `bigint`, because a number would round it (for σ=1 and margin 10−9 the smallest n is 3841458820694125959, which as a number would read 121 higher).
+
 ### Sample size for a target power
 
-With `power` given, `sampleSize` finds the smallest n whose power is proven to reach it: the power grows with n, so it doubles n until the target is met and then bisects. For a one-sided z test this agrees with the formula n≥((z1−α​+z1−β​)σ/δ)2; for a two-sided test it also counts the far tail, which the formula ignores.
+With `power` given, `sampleSize` finds the smallest n whose power is proven to reach it: the power grows with n, so it doubles n until the target is met and then bisects. For a one-sided z test this agrees with the formula n≥((z1−α​+z1−β​)σ/δ)2; for a two-sided test it also counts the far tail, which the formula ignores. With no effect (μ=μ0​) the power is α for every n, so a target up to α is met by n=1 and a larger one is refused.
 
 ```js
 sampleSize({ power: "0.8", mu0: 100, mu: 106, sigma: 15, alternative: "greater" }).n;   // 39

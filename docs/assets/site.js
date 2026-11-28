@@ -1,8 +1,8 @@
 // Shared page furniture for the stats docs: the contents column, the theme
 // switch and the code boxes. Add each topic page to PAGES as it is written.
 
-import * as A from "./stats.js?v=315445f08d";
-import { mountRunboxes } from "./runbox.js?v=315445f08d";
+import * as A from "./stats.js?v=4743369b49";
+import { mountRunboxes } from "./runbox.js?v=4743369b49";
 
 export { A };
 

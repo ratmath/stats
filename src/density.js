@@ -106,9 +106,13 @@ function polynomialNonnegative(p, ast, a, b, x) {
  *   fromDensity("exp(-x)", [0, "inf"])
  *   fromDensity([["x", [0, 1]], ["2 - x", [1, 2]]])         // a piecewise density
  *
- * The density is proven first: f ≥ 0 on the support and total mass 1
- * (exactly for piecewise polynomials, within a certified enclosure
- * otherwise), and refused if not. With { normalize: true } the formula is
+ * The density is checked first: f ≥ 0 on the support (proven) and total
+ * mass 1. For piecewise polynomials the mass is exact, so it is proven to be
+ * 1 (checks.massProven true). For other formulas the mass is a certified
+ * enclosure: one that misses 1 is refused, one that contains 1 is accepted
+ * with checks.mass "enclosure", checks.massProven false and the interval in
+ * checks.massEnclosure, since an enclosure cannot prove equality; pass
+ * { requireExactMass: true } to refuse those instead. With { normalize: true } the formula is
  * divided by its mass, which must then be exact; `constant` is the factor.
  * The result is a Continuous distribution: pdf, cdf, quantile, mean,
  * variance, samples, and `transform` and `orderStatistic` like any other.
@@ -162,7 +166,14 @@ export function fromDensity(f, support, options = {}) {
     pieces = pieces.map((p) => ({ ...p, ast: { type: "op", op: "*", args: [{ type: "num", value: constant }, p.ast] }, poly: p.poly && pScale(p.poly, constant) }));
   } else if (isQ(mass) ? !mass.equals(ONE) : !(mass.low.compareTo(ONE) <= 0 && mass.high.compareTo(ONE) >= 0)) {
     refuse("not-a-density", `the total mass is ${mass}, not 1; pass { normalize: true } to divide by it`);
+  } else if (!isQ(mass)) {
+    // an enclosure that contains 1 is consistent with mass 1 but does not prove it:
+    // (1 + 10⁻⁵⁰)·cos(x)/sin(1) on [0, 1] has mass 1 + 10⁻⁵⁰ and passes this test
+    if (options.requireExactMass) refuse("not-exact", `the total mass is only known to lie in ${mass}, which contains 1 but does not prove the mass is 1; only piecewise polynomials have an exact mass here`);
+    checks.massEnclosure = mass;
+    checks.massProven = false;
   }
+  if (checks.mass === "exact") checks.massProven = true;
   return build(pieces, x, {
     name: "density",
     params: { f: pieces.map((p) => format(p.ast)).join(" | ") },
