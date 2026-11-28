@@ -155,6 +155,27 @@ describe("finite probability", () => {
   });
 });
 
+describe("outcome identity", () => {
+  test("tuples whose members contain the separator stay apart (Astra review)", () => {
+    const d = S.finite([["a,sb", "c"], ["a", "b,sc"]]);
+    expect(d.entries.length).toBe(2);
+    expect(str(d.p(["a,sb", "c"]))).toBe("1/2");
+    expect(str(d.p(["a", "b,sc"]))).toBe("1/2");
+    expect(str(d.prob((o) => o[0] === "a"))).toBe("1/2");
+  });
+  test("sets, nested tuples and objects keep distinct members apart", () => {
+    expect(S.finite([new Set(["a,sb"]), new Set(["a", "b"])]).entries.length).toBe(2);
+    expect(S.finite([[["a"], "b"], [["a", "b"]]]).entries.length).toBe(2);
+    expect(S.finite([{ x: 1n }, { x: "1n" }]).entries.length).toBe(2);
+    expect(S.finite([{ x: R("1/2") }, { x: "1/2" }]).entries.length).toBe(2);
+  });
+  test("equal numbers still agree whatever their type", () => {
+    expect(S.finite([[1, 2], [1n, new Integer(2n)], [R(1), 2]]).entries.length).toBe(1);
+    expect(S.finite([new Set([1, 2]), new Set([2n, 1])]).entries.length).toBe(1);
+    expect(S.finite([{ x: 5 }, { x: 5n }]).entries.length).toBe(1);
+  });
+});
+
 describe("discrete distributions", () => {
   test("binomial", () => {
     const b = S.binomial(10, "3/10");

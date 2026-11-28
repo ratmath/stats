@@ -1,6 +1,6 @@
 # @ratmath/stats 0.3.0: full documentation
 
-> Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. From https://ratmath.com/stats/, commit 38c01b8. Each page ends with a runnable example; in it, PRINT(...) prints.
+> Probability and statistics for RatMath: exact finite probability, certified distributions, seeded data generation with noise, tests, regression, rank tests, the bootstrap, Markov chains and Bayesian updating. From https://ratmath.com/stats/, commit 8f9d83c. Each page ends with a runnable example; in it, PRINT(...) prints.
 
 
 ---

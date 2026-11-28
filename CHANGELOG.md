@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Docs: the browser bundle is rebuilt against Core 0.12 (it still rounded 65
+  to 60 at the tens and could not mix `floor()` results with Rationals), is
+  built without identifier minification (Bun renames classes even with
+  `keepNames`), and the docs build now runs every code box against the
+  emitted bundle after a mixed Integer/Rational check.
+- Distinct outcomes are no longer merged when their text runs together: the
+  internal outcome key now length-prefixes tuple and set members, so
+  `finite([["a,sb", "c"], ["a", "b,sc"]])` has two outcomes of probability
+  1/2 each instead of one of probability 1. Values inside plain-object
+  outcomes are keyed by type too (`{ x: "1/2" }` and `{ x: 1/2 }` differ;
+  `{ x: 5 }` and `{ x: 5n }` agree). Found by the external QA review.
 - Requires Core 0.12: the `@ratmath/core` peer range is now `>=0.12.0` (Core 0.12 returns Integers from `floor`/`ceil`/`trunc`/`round` and rounds half up by default).
 - `fromDensity` no longer presents an enclosure of the mass that contains 1 as
   a proof: `checks.massProven` (true only for an exact mass) and

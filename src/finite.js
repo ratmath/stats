@@ -6,7 +6,13 @@ import { Rational, RationalInterval, Integer } from "@ratmath/core";
 import { combinations, permutations, words } from "@ratmath/discrete";
 import { refuse, toQ, ZERO, ONE, Q, sqrt, whole, probability } from "./num.js";
 
-/** A text key that is the same for outcomes that should count as the same. */
+/**
+ * A text key that is the same for outcomes that should count as the same and
+ * different for outcomes that differ. Equal numbers agree whatever their type
+ * (1, 1n, Integer 1 and Rational 1/1 all key as `q1/1`). Keys of tuple and set
+ * members are length-prefixed, so a member's text can never run into the next
+ * member's: ["a,sb", "c"] and ["a", "b,sc"] stay different outcomes.
+ */
 export function keyOf(o) {
   if (o instanceof Rational) return `q${o.numerator}/${o.denominator}`;
   if (o instanceof Integer) return `q${o.value}/1`;
@@ -23,11 +29,27 @@ export function keyOf(o) {
       return "u";
     default:
       if (o === null) return "null";
-      if (Array.isArray(o)) return `[${o.map(keyOf).join(",")}]`;
-      if (o instanceof RationalInterval) return `i${o.low}:${o.high}`;
-      if (o instanceof Set) return `{${[...o].map(keyOf).sort().join(",")}}`;
-      return `o${JSON.stringify(o, (_k, v) => (typeof v === "bigint" ? `${v}n` : v instanceof Rational ? v.toString() : v))}`;
+      if (Array.isArray(o)) return `[${o.map(member).join("")}]`;
+      if (o instanceof RationalInterval) return `i${keyOf(o.low)}:${keyOf(o.high)}`;
+      if (o instanceof Set) return `{${[...new Set([...o].map(member))].sort().join("")}}`;
+      return `o${JSON.stringify(o, objectValue)}`;
   }
+}
+// A member's key with its length in front: "3:sab". Joined members can then be
+// read back one at a time, so different lists of members give different keys.
+const member = (o) => {
+  const k = keyOf(o);
+  return `${k.length}:${k}`;
+};
+// Inside plain objects, keep values apart by type the way keyOf does at the
+// top level: the string "1/2" and the rational 1/2, or "5n" and 5n, differ,
+// while 5, 5n and Rational 5 agree.
+// The holder's raw value is used because JSON.stringify applies toJSON first.
+function objectValue(k, v) {
+  const raw = k === "" ? v : this[k];
+  return typeof raw === "string" || typeof raw === "bigint" || typeof raw === "number" || typeof raw === "boolean" || raw instanceof Rational || raw instanceof Integer || raw instanceof RationalInterval
+    ? keyOf(raw)
+    : v;
 }
 const numeric = (o, what) => {
   if (o instanceof Rational) return o;
