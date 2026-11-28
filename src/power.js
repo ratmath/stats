@@ -102,13 +102,19 @@ function ceilOf(make) {
   refuse("precision", "the sample size is too close to a whole number to settle");
 }
 
+/** A sample size: a Number while it is exact as one, else the exact bigint. */
+const count = (n) => (n <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(n) : n);
+
 /**
  * Sample sizes.
  *   sampleSize({ margin, p = 1/2, level = 0.95 })            a proportion: n ≥ z²p(1 − p)/m²
  *   sampleSize({ margin, sigma, level })                     a mean with known σ: n ≥ (zσ/m)²
  *   sampleSize({ power, mu0, mu, sigma, alpha, alternative }) the z test reaching that power
  *   sampleSize({ power, test: "proportion", p0, p, alpha, alternative })
- * Returns { n, ... }: the smallest whole n that is proven to meet the target.
+ * Returns { n, ... }: the smallest whole n that is proven to meet the target,
+ * a Number, or a bigint when it is above 2^53 − 1 (a Number would round it).
+ * With no effect (mu = mu0, or p = p0) the power is alpha for every n, so
+ * n = 1 when the target power is at most alpha and a refusal otherwise.
  */
 export function sampleSize(spec = {}) {
   if (spec.power !== undefined) return sampleSizeForPower(spec);
@@ -121,14 +127,20 @@ export function sampleSize(spec = {}) {
       const t = div(mul(zq(bits), sigma), margin);
       return mul(t, t);
     });
-    return { n: Number(n), bound: value, kind: "mean", formula: "n ≥ (z·σ/m)²", level: conf, margin, sigma };
+    return { n: count(n), bound: value, kind: "mean", formula: "n ≥ (z·σ/m)²", level: conf, margin, sigma };
   }
   const p = spec.p === undefined ? Q(1, 2) : probability(spec.p, "p");
   const { n, value } = ceilOf((bits) => {
     const t = div(zq(bits), margin);
     return mul(mul(t, t), p.multiply(ONE.subtract(p)));
   });
-  return { n: Number(n), bound: value, kind: "proportion", formula: "n ≥ z²·p(1 − p)/m²", level: conf, margin, p };
+  return { n: count(n), bound: value, kind: "proportion", formula: "n ≥ z²·p(1 − p)/m²", level: conf, margin, p };
+}
+
+/** With no effect the power is the size alpha for every n: n = 1 reaches a target up to alpha, nothing reaches more. */
+function noEffect(target, alpha, at, info, why) {
+  if (target.compareTo(alpha) > 0) refuse("bad-argument", `${why}: the power is alpha = ${alpha} for every sample size, so it never reaches ${target}`);
+  return { n: 1, power: at(1), target, ...info, kind: "smallest n with proven power", note: `${why}: the power is alpha for every n` };
 }
 
 function sampleSizeForPower(spec) {
@@ -139,12 +151,12 @@ function sampleSizeForPower(spec) {
   let at;
   if (test === "z") {
     const mu0 = toQ(spec.mu0 ?? 0, "mu0"), mu = toQ(spec.mu, "mu"), sigma = positive(spec.sigma, "sigma");
-    if (mu.equals(mu0)) refuse("bad-argument", "mu equals mu0: no sample size gives power above alpha");
     at = (n) => zPower({ mu0, mu, sigma, n, alpha: a, alternative: alt, bits });
+    if (mu.equals(mu0)) return noEffect(target, a, at, { test, alpha: a, alternative: alt }, "mu equals mu0");
   } else if (test === "proportion") {
     const p0 = openProbability(spec.p0, "p0"), p = openProbability(spec.p, "p");
-    if (p.equals(p0)) refuse("bad-argument", "p equals p0: no sample size gives power above alpha");
     at = (n) => proportionPower({ p0, p, n, alpha: a, alternative: alt, bits });
+    if (p.equals(p0)) return noEffect(target, a, at, { test, alpha: a, alternative: alt }, "p equals p0");
   } else refuse("unsupported", `sample sizes for power are for test "z" or "proportion"`);
   // power rises with n: double until it is proven to reach the target, then bisect
   const reaches = (n) => {

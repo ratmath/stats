@@ -34,9 +34,10 @@ power({ test: "proportion", p0: "0.5", p: "0.6", n: 100, alternative: "greater" 
 <p>A 95% interval for a proportion has half-width \(z\sqrt{p(1-p)/n}\), so a margin of at most \(m\) needs \(n \ge z^2 p(1-p)/m^2\), with \(p = \tfrac12\) when nothing is known (the largest \(p(1-p)\)). For a mean with known \(\sigma\), \(n \ge (z\sigma/m)^2\). The bound is enclosed and rounded up only once its enclosure lies within one whole step, so the answer is never off by one.</p>
 <pre><code>sampleSize({ margin: "0.03" }).n;             // 1068: (1.96/0.03)²·¼ = 1067.1
 sampleSize({ margin: 2, sigma: 10 }).n;       // 97: (1.96·10/2)² = 96.04</code></pre>
+<p><code>n</code> is a JavaScript number while it is exact as one; above \(2^{53} - 1\) it is returned as a <code>bigint</code>, because a number would round it (for \(\sigma = 1\) and margin \(10^{-9}\) the smallest \(n\) is 3841458820694125959, which as a number would read 121 higher).</p>
 
 <h2>Sample size for a target power</h2>
-<p>With <code>power</code> given, <code>sampleSize</code> finds the smallest \(n\) whose power is proven to reach it: the power grows with \(n\), so it doubles \(n\) until the target is met and then bisects. For a one-sided z test this agrees with the formula \(n \ge \big((z_{1-\alpha} + z_{1-\beta})\sigma/\delta\big)^2\); for a two-sided test it also counts the far tail, which the formula ignores.</p>
+<p>With <code>power</code> given, <code>sampleSize</code> finds the smallest \(n\) whose power is proven to reach it: the power grows with \(n\), so it doubles \(n\) until the target is met and then bisects. For a one-sided z test this agrees with the formula \(n \ge \big((z_{1-\alpha} + z_{1-\beta})\sigma/\delta\big)^2\); for a two-sided test it also counts the far tail, which the formula ignores. With no effect (\(\mu = \mu_0\)) the power is \(\alpha\) for every \(n\), so a target up to \(\alpha\) is met by \(n = 1\) and a larger one is refused.</p>
 <pre><code>sampleSize({ power: "0.8", mu0: 100, mu: 106, sigma: 15, alternative: "greater" }).n;   // 39
 sampleSize({ power: "0.9", mu0: 0, mu: "0.5", sigma: 1 }).n;                          // 43</code></pre>
 <template data-runbox>

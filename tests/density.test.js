@@ -13,7 +13,15 @@ describe("fromDensity", () => {
     eq(X.mean, "3/2");
     eq(X.variance, "3/20");
     eq(X.cdf(1), "1/8");
-    expect(X.checks).toEqual({ nonnegative: "proven", mass: "exact" });
+    expect(X.checks).toEqual({ nonnegative: "proven", mass: "exact", massProven: true });
+  });
+  test("an enclosure of the mass that contains 1 is not reported as a proof", () => {
+    // (1 + 10⁻⁵⁰)·cos(x)/sin(1) has mass 1 + 10⁻⁵⁰, inside the certified enclosure of the integral
+    const X = fromDensity("(1 + 10^(-50))*cos(x)/sin(1)", [0, 1]);
+    expect(X.checks.mass).toBe("enclosure");
+    expect(X.checks.massProven).toBe(false);
+    expect(X.checks.massEnclosure.low.compareTo(new Rational(1n)) <= 0).toBe(true);
+    expect(() => fromDensity("(1 + 10^(-50))*cos(x)/sin(1)", [0, 1], { requireExactMass: true })).toThrow(/does not prove/);
   });
   test("rebuilds uniform(2, 5) exactly", () => {
     const X = fromDensity("1/3", [2, 5]);

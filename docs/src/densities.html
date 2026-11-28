@@ -21,7 +21,7 @@
 <p class="lede">Probability courses hand out densities like \(f(x) = cx^2\) on \([0, 2]\) and ask for \(c\), the mean and the variance; then they ask for the distribution of \(X^2\), or of the largest of three draws. <code>fromDensity</code>, <code>transform</code> and <code>orderStatistic</code> answer those questions, exactly whenever the density is a polynomial on each piece.</p>
 
 <h2>A density from a formula</h2>
-<p>A function \(f\) is a density on its support when \(f \ge 0\) there and \(\int f = 1\). <code>fromDensity</code> proves both before it builds anything. For a polynomial piece the sign is decided between its isolated real roots and the mass comes from the antiderivative, so both facts are exact. For any other formula, \(f \ge 0\) is shown by interval evaluation on ever smaller pieces and the mass by analytic's certified integral, which must enclose 1. With <code>{ normalize: true }</code> the formula is divided by its mass, reported as <code>constant</code>.</p>
+<p>A function \(f\) is a density on its support when \(f \ge 0\) there and \(\int f = 1\). <code>fromDensity</code> checks both before it builds anything. For a polynomial piece the sign is decided between its isolated real roots and the mass comes from the antiderivative, so both facts are exact and proven. For any other formula, \(f \ge 0\) is proven by interval evaluation on ever smaller pieces (on an unbounded support only over a window, which <code>checks.nonnegative</code> names), and the mass is enclosed by analytic's certified integral. An enclosure that misses 1 proves the mass is wrong and the density is refused. An enclosure that contains 1 proves only that the mass is within its width of 1: \((1 + 10^{-50})\cos x/\sin 1\) on \([0, 1]\) has mass \(1 + 10^{-50}\) and passes. Such a density is accepted with <code>checks.massProven</code> false and the interval in <code>checks.massEnclosure</code>; pass <code>{ requireExactMass: true }</code> to refuse it instead. With <code>{ normalize: true }</code> the formula is divided by its mass, reported as <code>constant</code>.</p>
 <pre><code>import { fromDensity, show } from "@ratmath/stats";
 
 const X = fromDensity("x^2", [0, 2], { normalize: true });
@@ -35,7 +35,7 @@ fromDensity("x", [0, 2]);   // refused: the total mass is 2, not 1</code></pre>
 T.mean;        // 1
 T.variance;    // 1/6 = 1/12 + 1/12
 fromDensity("exp(-x)", [0, "inf"]).cdf(1);   // ≈ 0.632121 = 1 − 1/e</code></pre>
-<p><code>checks</code> records how \(f \ge 0\) and the mass were established, so a reader can see which facts are exact and which rest on an enclosure.</p>
+<p><code>checks</code> records how \(f \ge 0\) and the mass were established, so a reader can see which facts are exact and which rest on an enclosure: <code>massProven</code> is true only for an exact mass.</p>
 
 <h2>A function of a random variable</h2>
 <p>For \(g\) increasing on the support, \(P(g(X) \le y) = P(X \le g^{-1}(y))\), and the density is \(f(g^{-1}(y)) / |g'(g^{-1}(y))|\). Decreasing \(g\) flips the inequality. <code>transform</code> proves \(g\) monotone from the sign of \(g'\) over the whole support (and refuses otherwise), finds \(g^{-1}(y)\) exactly when it is a simple fraction and encloses it by bisection otherwise, and keeps the mean and variance exact when \(X\) has polynomial pieces and \(g\) is a polynomial.</p>
