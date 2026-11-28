@@ -43,7 +43,7 @@ die().product(coin());                         // pairs [face, side], independen
 draw(deck(), 2).size;                          // 1326 two-card hands, each equally likely</code></pre>
 <p><code>map</code> sends each outcome through a function and adds up the probabilities that land together: that is the distribution of a random variable. <code>given</code> keeps the outcomes of an event and divides by its probability,</p>
 \[ P(A \mid B) = \frac{P(A \cap B)}{P(B)}, \]
-<p>and refuses when \(P(B) = 0\). <code>draw(items, k)</code> lists hands of \(k\) distinct items; with <code>{ ordered: true }</code> the order drawn matters, and with <code>{ replace: true, ordered: true }</code> items are put back. A finite distribution lists its outcomes, so it is limited to two million of them; for five-card hands, count with <a href="discrete-distributions.html"><code>hypergeometric</code></a> instead of listing.</p>
+<p>and refuses when \(P(B) = 0\). <code>draw(items, k)</code> lists hands of \(k\) distinct items; with <code>{ ordered: true }</code> the order drawn matters, and with <code>{ replace: true, ordered: true }</code> items are put back. A listed distribution is limited to two million outcomes; for five-card hands, count with <a href="discrete-distributions.html"><code>hypergeometric</code></a> instead of listing. Products such as <code>dice(9)</code> are not listed at all: they keep their independent parts and stream when needed (see <a href="many-dice.html">Many dice</a>).</p>
 
 <h2>Expectation and spread</h2>
 <pre><code>two.mean(([a, b]) =&gt; a + b);                   // 7
